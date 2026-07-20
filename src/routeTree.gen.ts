@@ -14,6 +14,7 @@ import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevAddressRouteImport } from './routes/dev.$address'
+import { Route as ApiPublicAuthXStartRouteImport } from './routes/api/public/auth/x.start'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -40,6 +41,11 @@ const DevAddressRoute = DevAddressRouteImport.update({
   path: '/dev/$address',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAuthXStartRoute = ApiPublicAuthXStartRouteImport.update({
+  id: '/api/public/auth/x/start',
+  path: '/api/public/auth/x/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof LeaderboardRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dev/$address': typeof DevAddressRoute
+  '/api/public/auth/x/start': typeof ApiPublicAuthXStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof LeaderboardRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dev/$address': typeof DevAddressRoute
+  '/api/public/auth/x/start': typeof ApiPublicAuthXStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,12 +70,25 @@ export interface FileRoutesById {
   '/leaderboard': typeof LeaderboardRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dev/$address': typeof DevAddressRoute
+  '/api/public/auth/x/start': typeof ApiPublicAuthXStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/leaderboard' | '/sitemap.xml' | '/dev/$address'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/leaderboard'
+    | '/sitemap.xml'
+    | '/dev/$address'
+    | '/api/public/auth/x/start'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/leaderboard' | '/sitemap.xml' | '/dev/$address'
+  to:
+    | '/'
+    | '/about'
+    | '/leaderboard'
+    | '/sitemap.xml'
+    | '/dev/$address'
+    | '/api/public/auth/x/start'
   id:
     | '__root__'
     | '/'
@@ -75,6 +96,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/sitemap.xml'
     | '/dev/$address'
+    | '/api/public/auth/x/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,6 +105,7 @@ export interface RootRouteChildren {
   LeaderboardRoute: typeof LeaderboardRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   DevAddressRoute: typeof DevAddressRoute
+  ApiPublicAuthXStartRoute: typeof ApiPublicAuthXStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -122,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/auth/x/start': {
+      id: '/api/public/auth/x/start'
+      path: '/api/public/auth/x/start'
+      fullPath: '/api/public/auth/x/start'
+      preLoaderRoute: typeof ApiPublicAuthXStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -131,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   LeaderboardRoute: LeaderboardRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   DevAddressRoute: DevAddressRoute,
+  ApiPublicAuthXStartRoute: ApiPublicAuthXStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
