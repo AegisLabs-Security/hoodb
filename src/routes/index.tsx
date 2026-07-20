@@ -2,9 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import bgSrc from "@/assets/hooddb-web-backgroud.png";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
 import { DevCard, type DevCardData } from "@/components/dev-card";
+import { RobinhoodNewPairsSection } from "@/components/robinhood-new-pairs-section";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
+import { getRobinhoodNewPairs } from "@/lib/dexscreener.functions";
 import { getGlobalStats, getLatestNetworkTxs } from "@/lib/rhc.functions";
 import { listTrackedDevs, getReviewAggregates } from "@/lib/reviews.functions";
 import { isValidAddress, shortAddr, timeAgo, RHC_EXPLORER } from "@/lib/rhc";
@@ -51,12 +53,19 @@ const trackedDevsQO = queryOptions({
   refetchInterval: 60_000,
   staleTime: 30_000,
 });
+const robinhoodNewPairsQO = queryOptions({
+  queryKey: ["market", "robinhood", "new-pairs"],
+  queryFn: () => getRobinhoodNewPairs(),
+  refetchInterval: 60_000,
+  staleTime: 30_000,
+});
 
 export const Route = createFileRoute("/")({
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(globalStatsQO);
     context.queryClient.ensureQueryData(latestTxsQO);
     context.queryClient.ensureQueryData(trackedDevsQO);
+    context.queryClient.ensureQueryData(robinhoodNewPairsQO);
   },
   component: Home,
   errorComponent: ({ error }) => <div className="p-8 text-red-400">{error.message}</div>,
@@ -92,6 +101,7 @@ function Home() {
   const { data: stats } = useSuspenseQuery(globalStatsQO);
   const { data: latest } = useSuspenseQuery(latestTxsQO);
   const { data: tracked } = useSuspenseQuery(trackedDevsQO);
+  const { data: robinhoodNewPairs } = useSuspenseQuery(robinhoodNewPairsQO);
 
   const scan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,6 +214,8 @@ function Home() {
           )}
         </div>
       </section>
+
+      <RobinhoodNewPairsSection result={robinhoodNewPairs} />
 
       <section className="mx-auto max-w-7xl px-4 md:px-8 py-20">
         <div className="text-center max-w-2xl mx-auto">

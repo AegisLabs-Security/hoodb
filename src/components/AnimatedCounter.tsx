@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface AnimatedCounterProps {
   end: number;
@@ -7,6 +8,10 @@ interface AnimatedCounterProps {
   prefix?: string;
   suffix?: string;
   decimals?: number;
+  className?: string;
+  valueClassName?: string;
+  suffixClassName?: string;
+  stacked?: boolean;
 }
 
 export function AnimatedCounter({
@@ -15,6 +20,10 @@ export function AnimatedCounter({
   prefix = "",
   suffix = "",
   decimals = 0,
+  className,
+  valueClassName,
+  suffixClassName,
+  stacked = false,
 }: AnimatedCounterProps) {
   const [count, setCount] = useState(0);
 
@@ -48,10 +57,24 @@ export function AnimatedCounter({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      className={cn(
+        "inline-flex items-end gap-2",
+        stacked && "flex-col items-start gap-1",
+        className
+      )}
     >
-      {prefix}
-      {count.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}
-      {suffix}
+      <span className={cn("block", valueClassName)}>
+        {prefix}
+        {count.toLocaleString(undefined, {
+          maximumFractionDigits: decimals,
+          minimumFractionDigits: decimals,
+        })}
+      </span>
+      {suffix ? (
+        <span className={cn("block", suffixClassName)}>
+          {suffix}
+        </span>
+      ) : null}
     </motion.span>
   );
 }

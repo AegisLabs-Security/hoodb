@@ -159,26 +159,32 @@ export function QuickStatsSection({
           <span>{gmgnMessage}</span>
         </div>
       )}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
         {displayStats.map((stat, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15 + i * 0.05 }}
-            className="neon-panel rounded-2xl p-6 hover:border-neon/40 transition-all duration-300"
+            className="neon-panel group flex min-h-[220px] flex-col rounded-[28px] p-5 md:p-6 hover:border-neon/40 transition-all duration-300"
           >
-            <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-muted-foreground mb-4">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-neon/10 text-neon">
+            <div className="flex items-start gap-3 text-xs uppercase tracking-[0.22em] text-muted-foreground mb-8">
+              <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-neon/10 text-neon shadow-[0_0_24px_rgba(132,255,0,0.08)]">
                 {stat.icon}
               </div>
-              {stat.label}
+              <span className="max-w-[10rem] leading-snug text-muted-foreground/90">
+                {stat.label}
+              </span>
             </div>
-            <div className="font-display font-black text-3xl md:text-4xl">
+            <div className="mt-auto min-w-0">
               <AnimatedCounter
                 end={stat.value}
                 suffix={stat.suffix}
                 decimals={stat.decimals || 0}
+                stacked={Boolean(stat.suffix)}
+                className="max-w-full"
+                valueClassName="max-w-full break-words font-display text-[2.75rem] font-black leading-[0.88] tracking-[-0.04em] text-foreground md:text-[3.25rem]"
+                suffixClassName="text-sm font-semibold uppercase tracking-[0.22em] text-neon/70 md:text-base"
               />
             </div>
           </motion.div>
