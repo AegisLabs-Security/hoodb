@@ -47,7 +47,7 @@ export function SiteFooter() {
           <div className="text-xs uppercase tracking-widest text-neon">Community</div>
           <div className="mt-4 flex gap-3">
             <a
-              href="https://x.com/hooddb"
+              href="https://x.com/Hooddb_"
               target="_blank"
               rel="noreferrer"
               className="group flex items-center gap-2 rounded-lg border border-border/60 px-4 py-2 text-sm hover:border-neon hover:text-neon transition"
@@ -56,7 +56,7 @@ export function SiteFooter() {
               <span>Follow on X</span>
             </a>
             <a
-              href="https://t.me/hooddb"
+              href="https://t.me/HOODDB"
               target="_blank"
               rel="noreferrer"
               className="group flex items-center gap-2 rounded-lg border border-border/60 px-4 py-2 text-sm hover:border-neon hover:text-neon transition"

@@ -283,7 +283,7 @@ function Home() {
               Scan their wallet, verify their contracts on-chain, and post a signed review.
             </p>
             <a
-              href="https://t.me/hooddb"
+              href="https://t.me/HOODDB"
               target="_blank"
               rel="noreferrer"
               className="mt-8 inline-flex h-12 px-8 items-center rounded-lg bg-primary text-primary-foreground font-bold uppercase tracking-wider hover:brightness-110"
