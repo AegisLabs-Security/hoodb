@@ -1,10 +1,58 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import logoAsset from "@/assets/hooddb-logo.png.asset.json";
-import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { Menu, X, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+
+type Profile = {
+  x_handle: string | null;
+  x_avatar_url: string | null;
+  x_name: string | null;
+} | null;
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [profile, setProfile] = useState<Profile>(null);
+  const [authed, setAuthed] = useState(false);
+  const navigate = useNavigate();
+  const router = useRouter();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const { data: s } = await supabase.auth.getSession();
+      if (!mounted) return;
+      if (!s.session) {
+        setAuthed(false);
+        setProfile(null);
+        return;
+      }
+      setAuthed(true);
+      const { data } = await supabase
+        .from("profiles")
+        .select("x_handle, x_avatar_url, x_name")
+        .eq("id", s.session.user.id)
+        .maybeSingle();
+      if (mounted) setProfile(data as Profile);
+    }
+    load();
+    const sub = supabase.auth.onAuthStateChange(() => load());
+    return () => {
+      mounted = false;
+      sub.data.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function signOut() {
+    await qc.cancelQueries();
+    qc.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/", replace: true });
+    router.invalidate();
+  }
+
   const links = [
     { to: "/", label: "Scan" },
     { to: "/leaderboard", label: "Leaderboard" },
@@ -42,14 +90,29 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
-          <a
-            href="https://x.com/hooddb"
-            target="_blank"
-            rel="noreferrer"
-            className="ml-3 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:brightness-110 transition"
-          >
-            Launch App
-          </a>
+          {authed ? (
+            <div className="ml-3 flex items-center gap-2 rounded-md border border-border pl-2 pr-1 py-1">
+              {profile?.x_avatar_url && (
+                <img src={profile.x_avatar_url} alt="" className="size-6 rounded-full" />
+              )}
+              <span className="text-sm font-semibold">@{profile?.x_handle ?? "you"}</span>
+              <button
+                onClick={signOut}
+                className="ml-1 p-1.5 rounded hover:bg-accent"
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <LogOut className="size-4" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/auth"
+              className="ml-3 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:brightness-110 transition"
+            >
+              Sign in with X
+            </Link>
+          )}
         </nav>
 
         <button
@@ -73,6 +136,25 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
+          {authed ? (
+            <button
+              onClick={() => {
+                setOpen(false);
+                signOut();
+              }}
+              className="block w-full text-left rounded-md px-3 py-2 text-sm hover:bg-accent"
+            >
+              Sign out (@{profile?.x_handle ?? "you"})
+            </button>
+          ) : (
+            <Link
+              to="/auth"
+              onClick={() => setOpen(false)}
+              className="block rounded-md px-3 py-2 text-sm bg-primary text-primary-foreground font-semibold"
+            >
+              Sign in with X
+            </Link>
+          )}
         </div>
       )}
     </header>
