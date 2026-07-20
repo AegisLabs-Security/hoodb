@@ -182,7 +182,9 @@ export const getDeployedContracts = createServerFn({ method: "GET" })
       creates.slice(0, 30).map(async (t: any): Promise<DeployedContract> => {
         const cAddr = t.created_contract.hash as string;
         const [info, token] = await Promise.all([
-          bs<{ name?: string | null; is_verified?: boolean }>(`/smart-contracts/${cAddr}`).catch(() => ({})),
+          bs<{ name?: string | null; is_verified?: boolean }>(`/smart-contracts/${cAddr}`).catch(
+            () => ({}) as { name?: string | null; is_verified?: boolean },
+          ),
           bs<{ name?: string | null; symbol?: string | null }>(`/tokens/${cAddr}`).catch(() => null),
         ]);
         return {
