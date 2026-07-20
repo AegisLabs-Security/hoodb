@@ -43,32 +43,34 @@ import {
   Clock,
   Trash2,
   AlertCircle,
+  Zap,
 } from "lucide-react";
 
 const devQO = (address: string) => ({
   overview: queryOptions({
     queryKey: ["rhc", "overview", address],
     queryFn: () => getDevOverview({ data: { address } }),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: 15_000,
+    staleTime: 5_000,
   }),
   txs: queryOptions({
     queryKey: ["rhc", "txs", address],
     queryFn: () => getAddressTxs({ data: { address } }),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: 10_000,
+    staleTime: 5_000,
   }),
   contracts: queryOptions({
     queryKey: ["rhc", "contracts", address],
     queryFn: () => getDeployedContracts({ data: { address } }),
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
   }),
   reviews: queryOptions({
     queryKey: ["hooddb", "reviews", address],
     queryFn: () => listReviews({ data: { address } }),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    // We're using Supabase realtime for reviews, so polling is a fallback
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   }),
 });
 
@@ -122,6 +124,29 @@ function DevPage() {
   const { data: reviews } = useSuspenseQuery(q.reviews);
   const qc = useQueryClient();
 
+  // Realtime subscription for reviews
+  useEffect(() => {
+    const channel = supabase
+      .channel(`reviews:${address}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "reviews",
+          filter: `address=eq.${address}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["hooddb", "reviews", address] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [address, qc]);
+
   const [copied, setCopied] = useState(false);
 
   const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : null;
@@ -137,168 +162,255 @@ function DevPage() {
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
 
+      {/* Hero Section */}
       <section className="relative border-b border-border/60">
         <div className="absolute inset-0 grid-bg opacity-40" />
-        <div className="relative mx-auto max-w-6xl px-4 md:px-8 py-10 flex flex-col md:flex-row gap-6 md:items-center">
-          <div className="relative">
-            <div className="size-24 rounded-2xl border-2 border-neon/50 bg-surface-2 flex items-center justify-center font-mono text-xl text-neon">
+        <div className="relative mx-auto max-w-7xl px-4 md:px-8 py-12 flex flex-col md:flex-row gap-8 md:items-center">
+          <div className="relative shrink-0">
+            <div className="size-28 md:size-32 rounded-2xl border-2 border-neon/50 bg-surface-2 flex items-center justify-center font-mono text-2xl md:text-3xl text-neon">
               {address.slice(2, 6).toUpperCase()}
             </div>
-            <div className="absolute -bottom-2 -right-2 rounded-full bg-background p-1">
-              <span className="block size-3 rounded-full bg-neon animate-pulse" />
+            <div className="absolute -bottom-3 -right-3 rounded-full bg-background p-1">
+              <span className="block size-4 rounded-full bg-neon animate-pulse" />
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap gap-2 mb-2">
-              {overview.isContract && (
-                <Chip label="Smart Contract" tone="orange" />
-              )}
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className="inline-flex items-center gap-1 rounded-full border border-neon/30 bg-neon/10 px-3 py-1 text-xs uppercase tracking-widest text-neon">
+                <span className="size-1.5 rounded-full bg-neon animate-pulse" /> Live
+              </span>
+              {overview.isContract && <Chip label="Smart Contract" tone="orange" />}
               {overview.verifiedContractsCount > 0 && (
-                <Chip icon={<ShieldCheck className="size-3" />} label={`${overview.verifiedContractsCount} verified`} tone="neon" />
+                <Chip icon={<ShieldCheck className="size-3" />} label={`${overview.verifiedContractsCount} Verified`} tone="neon" />
               )}
-              {overview.contractsDeployedCount > 5 && (
-                <Chip label="Active builder" tone="blue" />
-              )}
+              {overview.contractsDeployedCount > 5 && <Chip label="Active Builder" tone="blue" />}
             </div>
-            <h1 className="font-display text-3xl md:text-4xl font-black break-all">
+            <h1 className="font-display text-4xl md:text-6xl font-black break-all leading-tight">
               {shortAddr(address)}
             </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-4">
               <button
                 onClick={copy}
-                className="font-mono text-xs text-muted-foreground hover:text-neon inline-flex items-center gap-2"
+                className="font-mono text-sm text-muted-foreground hover:text-neon inline-flex items-center gap-2 transition"
               >
                 {address}
-                <Copy className="size-3.5" />
-                {copied && <span className="text-neon">copied</span>}
+                <Copy className="size-4" />
+                {copied && <span className="text-neon font-bold">copied</span>}
               </button>
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Balance: <span className="text-foreground font-mono">{overview.balance}</span> · First seen{" "}
-              {overview.firstSeenAt ? timeAgo(overview.firstSeenAt) : "unknown"}
-            </p>
+            <div className="mt-4 flex flex-wrap gap-6 text-sm text-muted-foreground">
+              <span>
+                <span className="text-foreground font-bold">Balance:</span> <span className="font-mono">{overview.balance}</span>
+              </span>
+              <span>
+                <span className="text-foreground font-bold">First Seen:</span> {overview.firstSeenAt ? timeAgo(overview.firstSeenAt) : "Unknown"}
+              </span>
+              <span>
+                <span className="text-foreground font-bold">Last Activity:</span> {txs[0] ? timeAgo(txs[0].timestamp) : "N/A"}
+              </span>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3 shrink-0">
             <a
               href={explorerAddr(address)}
               target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm hover:border-neon hover:text-neon"
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-3 text-sm font-bold hover:border-neon hover:text-neon transition"
             >
-              Blockscout <ExternalLink className="size-3.5" />
+              Blockscout <ExternalLink className="size-4" />
             </a>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl w-full px-4 md:px-8 py-8 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatBox icon={<Star className="size-4" />} label="Reputation" value={rep.score.toFixed(2)} sub={`${reviews.length} reviews`} big />
-        <StatBox icon={<Rocket className="size-4" />} label="Contracts" value={overview.contractsDeployedCount.toString()} sub={`${overview.verifiedContractsCount} verified`} />
-        <StatBox icon={<BarChart3 className="size-4" />} label="Success rate" value={`${overview.successRate}%`} />
-        <StatBox icon={<Wallet className="size-4" />} label="Transactions" value={overview.txCount.toLocaleString()} />
+      {/* Stats Grid */}
+      <section className="mx-auto max-w-7xl w-full px-4 md:px-8 py-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatBox icon={<Star className="size-5" />} label="Reputation" value={rep.score.toFixed(2)} sub={`${reviews.length} Reviews`} big />
+        <StatBox icon={<Rocket className="size-5" />} label="Contracts" value={overview.contractsDeployedCount.toString()} sub={`${overview.verifiedContractsCount} Verified`} />
+        <StatBox icon={<BarChart3 className="size-5" />} label="Success Rate" value={`${overview.successRate}%`} />
+        <StatBox icon={<Wallet className="size-5" />} label="Transactions" value={overview.txCount.toLocaleString()} />
       </section>
 
-      <section className="mx-auto max-w-6xl w-full px-4 md:px-8 pb-16 grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="neon-panel rounded-xl">
-            <div className="p-5 border-b border-border/60 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Rocket className="size-4 text-neon" />
-                <h2 className="font-display text-lg font-bold">Deployed contracts</h2>
+      {/* Main Content */}
+      <section className="mx-auto max-w-7xl w-full px-4 md:px-8 pb-20 grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Deployed Contracts */}
+          <div className="neon-panel rounded-2xl overflow-hidden">
+            <div className="p-6 border-b border-border/60 flex items-center justify-between bg-surface/50">
+              <div className="flex items-center gap-3">
+                <div className="inline-flex items-center justify-center size-10 rounded-lg bg-neon/10 border border-neon/30">
+                  <Rocket className="size-5 text-neon" />
+                </div>
+                <div>
+                  <h2 className="font-display text-xl font-bold">Deployed Contracts</h2>
+                  <p className="text-xs text-muted-foreground">All contracts deployed from this wallet</p>
+                </div>
               </div>
               <a
                 href={`${RHC_EXPLORER}/address/${address}/contract-creations`}
                 target="_blank" rel="noreferrer"
-                className="text-xs text-muted-foreground hover:text-neon"
+                className="text-sm text-muted-foreground hover:text-neon font-semibold transition"
               >
-                verify on Blockscout →
+                View on Blockscout →
               </a>
             </div>
             <div className="divide-y divide-border/60">
-              {contracts.map((c) => (
+              {contracts.map((c, i) => (
                 <a
                   key={c.address}
                   href={explorerAddr(c.address)}
                   target="_blank" rel="noreferrer"
-                  className="p-5 flex items-center gap-4 hover:bg-neon/5 transition"
+                  className="p-6 flex items-center gap-4 hover:bg-neon/5 transition group"
+                  style={{ animationDelay: `${i * 50}ms` }}
                 >
-                  <div className="size-10 rounded-lg bg-neon/10 border border-neon/30 flex items-center justify-center font-mono text-[10px] font-bold text-neon">
+                  <div className="size-12 rounded-xl bg-neon/10 border border-neon/30 flex items-center justify-center font-mono text-sm font-bold text-neon shrink-0">
                     {c.tokenSymbol?.slice(0, 3) ?? c.address.slice(2, 5).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate">
-                      {c.name ?? "Unnamed contract"}{" "}
-                      {c.tokenSymbol && <span className="text-muted-foreground font-mono text-xs">${c.tokenSymbol}</span>}
+                    <div className="font-semibold text-lg truncate group-hover:text-neon transition">
+                      {c.name ?? "Unnamed Contract"}{" "}
+                      {c.tokenSymbol && <span className="text-muted-foreground font-mono text-sm">${c.tokenSymbol}</span>}
                     </div>
-                    <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5 font-mono">
+                    <div className="text-xs text-muted-foreground inline-flex items-center gap-2 font-mono mt-1">
                       <Clock className="size-3" /> {timeAgo(c.deployedAt)} · {shortAddr(c.address)}
                     </div>
                   </div>
                   {c.verified ? (
-                    <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-neon/15 text-neon">Verified</span>
+                    <span className="rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-neon/15 text-neon shrink-0">
+                      Verified
+                    </span>
                   ) : (
-                    <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-orange-500/15 text-orange-300">Unverified</span>
+                    <span className="rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-orange-500/15 text-orange-300 shrink-0">
+                      Unverified
+                    </span>
                   )}
                 </a>
               ))}
               {contracts.length === 0 && (
-                <div className="p-8 text-center text-muted-foreground text-sm">
-                  No contracts deployed from this wallet.
+                <div className="p-12 text-center text-muted-foreground">
+                  <div className="text-4xl mb-3">🚀</div>
+                  <p className="text-lg font-semibold">No contracts deployed yet</p>
+                  <p className="text-sm">Check back later for deployments</p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="neon-panel rounded-xl">
-            <div className="p-5 border-b border-border/60 flex items-center gap-2">
-              <BarChart3 className="size-4 text-neon" />
-              <h2 className="font-display text-lg font-bold">Recent activity</h2>
+          {/* Recent Activity */}
+          <div className="neon-panel rounded-2xl overflow-hidden">
+            <div className="p-6 border-b border-border/60 flex items-center gap-3 bg-surface/50">
+              <div className="inline-flex items-center justify-center size-10 rounded-lg bg-neon/10 border border-neon/30">
+                <BarChart3 className="size-5 text-neon" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-bold">Recent Activity</h2>
+                <p className="text-xs text-muted-foreground">Latest transactions from this wallet</p>
+              </div>
             </div>
-            <div className="divide-y divide-border/60 max-h-[420px] overflow-auto">
-              {txs.slice(0, 15).map((t) => (
+            <div className="divide-y divide-border/60 max-h-[500px] overflow-auto">
+              {txs.slice(0, 20).map((t, i) => (
                 <a
                   key={t.hash}
                   href={explorerTx(t.hash)}
                   target="_blank" rel="noreferrer"
-                  className="p-4 flex items-center gap-3 text-sm hover:bg-neon/5"
+                  className="p-5 flex items-center gap-4 text-sm hover:bg-neon/5 transition group"
                 >
                   <span
                     className={
-                      "size-2 rounded-full " +
-                      (t.status === "success" ? "bg-neon" : t.status === "pending" ? "bg-orange-400" : "bg-red-500")
+                      "size-3 rounded-full shrink-0 " +
+                      (t.status === "success" ? "bg-neon" : t.status === "pending" ? "bg-orange-400 animate-pulse" : "bg-red-500")
                     }
                   />
-                  <span className="font-mono text-xs text-muted-foreground w-24 truncate">{shortAddr(t.hash)}</span>
-                  <span className="flex-1 truncate">{t.method ?? (t.createdContract ? "Contract deploy" : "Transfer")}</span>
-                  <span className="text-xs text-muted-foreground">{timeAgo(t.timestamp)}</span>
+                  <span className="font-mono text-xs text-muted-foreground w-28 truncate shrink-0">{shortAddr(t.hash)}</span>
+                  <span className="flex-1 truncate font-medium group-hover:text-neon transition">
+                    {t.method ?? (t.createdContract ? "Contract Deployment" : "Transfer")}
+                  </span>
+                  <span className="text-xs text-muted-foreground shrink-0">{timeAgo(t.timestamp)}</span>
                 </a>
               ))}
               {txs.length === 0 && (
-                <div className="p-8 text-center text-muted-foreground text-sm">No transactions found.</div>
+                <div className="p-12 text-center text-muted-foreground">
+                  <div className="text-4xl mb-3">📊</div>
+                  <p className="text-lg font-semibold">No transactions found</p>
+                </div>
               )}
             </div>
           </div>
 
-          <div className="neon-panel rounded-xl p-5">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="size-4 text-neon" />
-              <h2 className="font-display text-lg font-bold">Reputation breakdown</h2>
+          {/* Reputation Breakdown */}
+          <div className="neon-panel rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="inline-flex items-center justify-center size-10 rounded-lg bg-neon/10 border border-neon/30">
+                <BarChart3 className="size-5 text-neon" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-bold">Reputation Breakdown</h2>
+                <p className="text-xs text-muted-foreground">How the reputation score is calculated</p>
+              </div>
             </div>
-            <div className="mt-4 space-y-3">
-              {rep.parts.map((p) => (
-                <div key={p.label} className="flex items-center gap-3 text-sm">
-                  <div className="w-40 text-muted-foreground">{p.label}</div>
-                  <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
-                    <div className="h-full bg-neon" style={{ width: `${(p.value / 5) * 100}%` }} />
+            <div className="space-y-5">
+              {rep.parts.map((p, i) => (
+                <div key={p.label} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">{p.label}</span>
+                    <span className="text-neon font-bold">{p.detail}</span>
                   </div>
-                  <div className="w-40 text-right text-xs text-muted-foreground">{p.detail}</div>
+                  <div className="h-3 rounded-full bg-surface-2 overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-neon/80 to-neon transition-all duration-500 ease-out" 
+                      style={{ width: `${Math.min((p.value / 5) * 100, 100)}%` }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="space-y-6">
+        {/* Right Sidebar */}
+        <div className="space-y-8">
           <ReviewsPanel address={address} onChanged={() => qc.invalidateQueries({ queryKey: ["hooddb", "reviews", address] })} />
+          
+          {/* Quick Stats Card */}
+          <div className="neon-panel rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="inline-flex items-center justify-center size-10 rounded-lg bg-neon/10 border border-neon/30">
+                <Zap className="size-5 text-neon" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-bold">Quick Stats</h2>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Verified Ratio</span>
+                <span className="font-bold text-neon">
+                  {overview.contractsDeployedCount > 0 
+                    ? `${Math.round((overview.verifiedContractsCount / overview.contractsDeployedCount) * 100)}%` 
+                    : "0%"}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
+                <div 
+                  className="h-full bg-neon" 
+                  style={{ width: `${overview.contractsDeployedCount > 0 ? (overview.verifiedContractsCount / overview.contractsDeployedCount) * 100 : 0}%` }}
+                />
+              </div>
+              
+              <div className="pt-2 border-t border-border/60 flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Avg Rating</span>
+                <span className="font-bold text-neon">
+                  {avg ? `${avg.toFixed(1)} ★` : "No reviews"}
+                </span>
+              </div>
+              
+              <div className="pt-2 border-t border-border/60 flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Last Contract</span>
+                <span className="font-mono text-xs">
+                  {contracts[0] ? timeAgo(contracts[0].deployedAt) : "N/A"}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -347,11 +459,17 @@ function ReviewsPanel({ address, onChanged }: { address: string; onChanged: () =
   const [content, setContent] = useState("");
 
   return (
-    <div className="neon-panel rounded-xl">
-      <div className="p-5 border-b border-border/60 flex items-center gap-2">
-        <Users className="size-4 text-neon" />
-        <h2 className="font-display text-lg font-bold">Community reviews</h2>
+    <div className="neon-panel rounded-2xl overflow-hidden">
+      <div className="p-6 border-b border-border/60 flex items-center gap-3 bg-surface/50">
+        <div className="inline-flex items-center justify-center size-10 rounded-lg bg-neon/10 border border-neon/30">
+          <Users className="size-5 text-neon" />
+        </div>
+        <div>
+          <h2 className="font-display text-xl font-bold">Community Reviews</h2>
+          <p className="text-xs text-muted-foreground">{reviews.length} review{reviews.length !== 1 ? 's' : ''} from verified users</p>
+        </div>
       </div>
+      
       {authed ? (
         <form
           onSubmit={(e) => {
@@ -361,92 +479,118 @@ function ReviewsPanel({ address, onChanged }: { address: string; onChanged: () =
               onSuccess: () => setContent(""),
             });
           }}
-          className="p-5 space-y-3 border-b border-border/60"
+          className="p-6 space-y-4 border-b border-border/60"
         >
-          <div className="text-xs text-muted-foreground">
+          <div className="text-sm text-muted-foreground">
             Posting as{" "}
-            <span className="text-neon">@{profileQuery.data?.x_handle ?? "you"}</span>
+            <span className="text-neon font-bold">@{profileQuery.data?.x_handle ?? "you"}</span>
           </div>
-          <div className="flex gap-1">
+          
+          <div className="flex gap-2">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 type="button"
                 key={n}
                 onClick={() => setRating(n)}
-                className="p-1"
+                className="p-2 rounded-lg hover:bg-neon/10 transition"
                 aria-label={`${n} star`}
               >
-                <Star className={"size-6 " + (n <= rating ? "fill-neon text-neon" : "text-muted-foreground")} />
+                <Star className={"size-8 " + (n <= rating ? "fill-neon text-neon drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "text-muted-foreground")} />
               </button>
             ))}
           </div>
+          
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Share your experience with this dev…"
-            rows={3}
+            placeholder="Share your experience with this developer…"
+            rows={4}
             maxLength={1000}
-            className="w-full rounded-md bg-surface border border-border p-3 text-sm focus:outline-none focus:border-neon"
+            className="w-full rounded-xl bg-surface border border-border p-4 text-sm focus:outline-none focus:border-neon focus:ring-2 focus:ring-neon/20 transition resize-none"
           />
+          
           <button
             type="submit"
             disabled={post.isPending}
-            className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-bold hover:brightness-110 disabled:opacity-50"
+            className="w-full h-12 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:brightness-110 disabled:opacity-50 transition"
           >
-            {post.isPending ? "Posting…" : "Post review"}
+            {post.isPending ? "Posting Review…" : "Post Review"}
           </button>
+          
           {post.error && (
-            <div className="text-xs text-red-400 flex items-center gap-1">
-              <AlertCircle className="size-3" /> {(post.error as Error).message}
+            <div className="text-sm text-red-400 flex items-center gap-2 bg-red-500/10 rounded-lg p-3">
+              <AlertCircle className="size-4" /> {(post.error as Error).message}
             </div>
           )}
         </form>
       ) : (
-        <div className="p-5 border-b border-border/60 text-sm text-muted-foreground">
-          <Link to="/auth" className="text-neon hover:underline">Sign in with X</Link> to post a
-          signed review. Every review is tied to a verified X handle.
+        <div className="p-6 border-b border-border/60 text-sm text-muted-foreground">
+          <p className="mb-3">Want to leave a review?</p>
+          <Link 
+            to="/auth" 
+            className="text-neon hover:underline font-bold inline-flex items-center gap-2"
+          >
+            Sign in with X <ExternalLink className="size-3" />
+          </Link>
+          <p className="mt-2 text-xs">Every review is tied to a verified X handle to prevent spam.</p>
         </div>
       )}
-      <div className="divide-y divide-border/60 max-h-[520px] overflow-auto">
+      
+      <div className="divide-y divide-border/60 max-h-[600px] overflow-auto">
         {reviews.length === 0 && (
-          <div className="p-6 text-center text-muted-foreground text-sm">
-            No reviews yet. Be the first.
+          <div className="p-12 text-center text-muted-foreground">
+            <div className="text-4xl mb-3">⭐</div>
+            <p className="text-lg font-semibold">No reviews yet</p>
+            <p className="text-sm mt-1">Be the first to review this developer!</p>
           </div>
         )}
+        
         {reviews.map((r) => (
-          <div key={r.id} className="p-5">
-            <div className="flex items-center justify-between">
+          <div key={r.id} className="p-6 hover:bg-surface/30 transition">
+            <div className="flex items-center justify-between mb-3">
               <a
                 href={r.x_handle ? `https://x.com/${r.x_handle}` : "#"}
                 target="_blank" rel="noreferrer"
-                className="flex items-center gap-2 hover:text-neon"
+                className="flex items-center gap-3 hover:text-neon transition"
               >
                 {r.x_avatar_url ? (
-                  <img src={r.x_avatar_url} alt="" className="size-7 rounded-full border border-neon/30" />
+                  <img 
+                    src={r.x_avatar_url} 
+                    alt="" 
+                    className="size-10 rounded-full border-2 border-neon/30 object-cover" 
+                  />
                 ) : (
-                  <div className="size-7 rounded-full bg-surface-2 border border-neon/30" />
+                  <div className="size-10 rounded-full bg-surface-2 border-2 border-neon/30" />
                 )}
-                <span className="text-sm font-semibold">@{r.x_handle ?? "anon"}</span>
-                {r.x_verified && <ShieldCheck className="size-3.5 text-neon" />}
+                <div className="flex flex-col">
+                  <span className="text-base font-bold flex items-center gap-2">
+                    @{r.x_handle ?? "anon"}
+                    {r.x_verified && <ShieldCheck className="size-4 text-neon" />}
+                  </span>
+                </div>
               </a>
-              <div className="flex items-center gap-2">
-                <div className="text-neon text-xs font-mono">
+              
+              <div className="flex items-center gap-3">
+                <div className="text-neon font-mono">
                   {"★".repeat(r.rating)}
                   <span className="opacity-30">{"★".repeat(5 - r.rating)}</span>
                 </div>
+                
                 {profileQuery.data?.id === r.author_id && (
                   <button
                     onClick={() => del.mutate(r.id)}
-                    className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-400"
+                    className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition"
                     aria-label="Delete review"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-4" />
                   </button>
                 )}
               </div>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">{r.content}</p>
-            <div className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground/60">
+            
+            <p className="text-base text-foreground/90 leading-relaxed">{r.content}</p>
+            
+            <div className="mt-3 text-xs uppercase tracking-widest text-muted-foreground/70 font-mono">
               {timeAgo(r.created_at)}
             </div>
           </div>
@@ -460,14 +604,17 @@ function StatBox({
   icon, label, value, sub, big,
 }: { icon: React.ReactNode; label: string; value: string; sub?: string; big?: boolean }) {
   return (
-    <div className="neon-panel rounded-xl p-4">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground">
-        {icon}{label}
+    <div className="neon-panel rounded-2xl p-6 hover:border-neon/40 transition-all duration-300">
+      <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-muted-foreground mb-3">
+        <div className="inline-flex items-center justify-center size-8 rounded-lg bg-neon/10 text-neon">
+          {icon}
+        </div>
+        {label}
       </div>
-      <div className={"mt-1 font-display font-black " + (big ? "text-4xl neon-text" : "text-3xl")}>
+      <div className={"font-display font-black transition-all duration-300 " + (big ? "text-5xl neon-text" : "text-4xl")}>
         {value}
       </div>
-      {sub && <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{sub}</div>}
+      {sub && <div className="text-xs uppercase tracking-widest text-muted-foreground mt-2 font-semibold">{sub}</div>}
     </div>
   );
 }
