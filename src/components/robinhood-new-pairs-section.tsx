@@ -23,7 +23,7 @@ export function RobinhoodNewPairsSection({
           <p className="mt-4 text-muted-foreground">
             Discover newly active Robinhood trading pairs with live liquidity,
             price action, and launch-time visibility before they disappear into
-            the noise. This feed auto-syncs with DexScreener every 15 seconds.
+            the noise. This feed auto-syncs with DexScreener every 5 seconds.
           </p>
         </div>
 
