@@ -9,28 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as DevAddressRouteImport } from './routes/dev.$address'
-import { Route as ApiPublicAuthXCallbackRouteImport } from './routes/api/public/auth/x.callback'
 import { Route as ApiPublicAuthXStartRouteImport } from './routes/api/public/auth/x.start'
+import { Route as ApiPublicAuthXCallbackRouteImport } from './routes/api/public/auth/x.callback'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
@@ -38,9 +28,19 @@ const LeaderboardRoute = LeaderboardRouteImport.update({
   path: '/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevAddressRoute = DevAddressRouteImport.update({
@@ -48,14 +48,14 @@ const DevAddressRoute = DevAddressRouteImport.update({
   path: '/dev/$address',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicAuthXCallbackRoute = ApiPublicAuthXCallbackRouteImport.update({
-  id: '/api/public/auth/x/callback',
-  path: '/api/public/auth/x/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicAuthXStartRoute = ApiPublicAuthXStartRouteImport.update({
   id: '/api/public/auth/x/start',
   path: '/api/public/auth/x/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAuthXCallbackRoute = ApiPublicAuthXCallbackRouteImport.update({
+  id: '/api/public/auth/x/callback',
+  path: '/api/public/auth/x/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -136,25 +136,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leaderboard': {
@@ -164,11 +150,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev/$address': {
@@ -178,18 +178,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/auth/x/callback': {
-      id: '/api/public/auth/x/callback'
-      path: '/api/public/auth/x/callback'
-      fullPath: '/api/public/auth/x/callback'
-      preLoaderRoute: typeof ApiPublicAuthXCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/auth/x/start': {
       id: '/api/public/auth/x/start'
       path: '/api/public/auth/x/start'
       fullPath: '/api/public/auth/x/start'
       preLoaderRoute: typeof ApiPublicAuthXStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/auth/x/callback': {
+      id: '/api/public/auth/x/callback'
+      path: '/api/public/auth/x/callback'
+      fullPath: '/api/public/auth/x/callback'
+      preLoaderRoute: typeof ApiPublicAuthXCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
