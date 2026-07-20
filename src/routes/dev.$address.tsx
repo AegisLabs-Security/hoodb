@@ -49,6 +49,18 @@ import { SiteFooter } from "@/components/site-footer";
 import { getDevOverview, getAddressTxs, getDeployedContracts } from "@/lib/rhc.functions";
 import { listReviews, postReview, deleteMyReview, getMyProfile } from "@/lib/reviews.functions";
 import { isValidAddress, shortAddr, timeAgo, computeReputation, explorerAddr, explorerTx, RHC_EXPLORER } from "@/lib/rhc";
+import {
+  getGmgnWalletStats,
+  getGmgnCreatedTokens,
+  getGmgnWalletHoldings,
+  getGmgnWalletActivity,
+} from "@/lib/gmgn.functions";
+import type {
+  GmgnWalletStats,
+  GmgnCreatedTokens,
+  GmgnWalletHoldings,
+  GmgnWalletActivity,
+} from "@/lib/gmgn.types";
 import { supabase } from "@/integrations/supabase/client";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { CircularProgress } from "@/components/CircularProgress";
@@ -183,6 +195,30 @@ const devQO = (address: string) => ({
     refetchInterval: 60_000,
     staleTime: 30_000,
   }),
+  gmgnWalletStats: queryOptions({
+    queryKey: ["gmgn", "walletStats", address],
+    queryFn: () => getGmgnWalletStats({ data: { address } }),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  }),
+  gmgnCreatedTokens: queryOptions({
+    queryKey: ["gmgn", "createdTokens", address],
+    queryFn: () => getGmgnCreatedTokens({ data: { address } }),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  }),
+  gmgnWalletHoldings: queryOptions({
+    queryKey: ["gmgn", "walletHoldings", address],
+    queryFn: () => getGmgnWalletHoldings({ data: { address } }),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  }),
+  gmgnWalletActivity: queryOptions({
+    queryKey: ["gmgn", "walletActivity", address],
+    queryFn: () => getGmgnWalletActivity({ data: { address } }),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  }),
 });
 
 export const Route = createFileRoute("/dev/$address")({
@@ -197,6 +233,10 @@ export const Route = createFileRoute("/dev/$address")({
     context.queryClient.ensureQueryData(q.txs);
     context.queryClient.ensureQueryData(q.contracts);
     context.queryClient.ensureQueryData(q.reviews);
+    context.queryClient.ensureQueryData(q.gmgnWalletStats);
+    context.queryClient.ensureQueryData(q.gmgnCreatedTokens);
+    context.queryClient.ensureQueryData(q.gmgnWalletHoldings);
+    context.queryClient.ensureQueryData(q.gmgnWalletActivity);
   },
   head: ({ params }) => ({
     meta: [
@@ -233,6 +273,10 @@ function DevPage() {
   const { data: txs } = useSuspenseQuery(q.txs);
   const { data: contracts } = useSuspenseQuery(q.contracts);
   const { data: reviews } = useSuspenseQuery(q.reviews);
+  const { data: gmgnWalletStats } = useSuspenseQuery(q.gmgnWalletStats);
+  const { data: gmgnCreatedTokens } = useSuspenseQuery(q.gmgnCreatedTokens);
+  const { data: gmgnWalletHoldings } = useSuspenseQuery(q.gmgnWalletHoldings);
+  const { data: gmgnWalletActivity } = useSuspenseQuery(q.gmgnWalletActivity);
   const qc = useQueryClient();
 
   // Realtime subscription for reviews
@@ -277,12 +321,12 @@ function DevPage() {
         <div className="absolute inset-0 grid-bg opacity-30" />
         <div className="relative">
           {/* Header Section */}
-          <HeaderSection
-            address={address}
-            copied={copied}
-            copy={copy}
-            trustScore={mockGmgnData.trustScore}
-          />
+        <HeaderSection
+          address={address}
+          copied={copied}
+          copy={copy}
+          gmgnWalletStats={gmgnWalletStats}
+        />
 
           {/* Main Content */}
           <div className="mx-auto max-w-7xl w-full px-4 md:px-8 py-12">
@@ -290,25 +334,39 @@ function DevPage() {
               {/* Left Column */}
               <div className="lg:col-span-2 space-y-10">
                 {/* Quick Stats Grid */}
-                <QuickStatsSection />
+        <QuickStatsSection
+          gmgnWalletStats={gmgnWalletStats}
+          gmgnCreatedTokens={gmgnCreatedTokens}
+          gmgnWalletHoldings={gmgnWalletHoldings}
+        />
 
                 {/* AI Summary */}
-                <AISummarySection />
+                <AISummarySection
+                  gmgnWalletStats={gmgnWalletStats}
+                  gmgnCreatedTokens={gmgnCreatedTokens}
+                  gmgnWalletHoldings={gmgnWalletHoldings}
+                />
 
                 {/* Launch History */}
-                <LaunchHistorySection tokens={mockGmgnData.tokens} />
+        <LaunchHistorySection gmgnCreatedTokens={gmgnCreatedTokens} />
 
                 {/* Token Performance Charts */}
                 <TokenPerformanceCharts />
 
                 {/* Developer Reputation */}
-                <DeveloperReputationSection breakdown={mockGmgnData.reputationBreakdown} />
+                <DeveloperReputationSection
+                  gmgnWalletStats={gmgnWalletStats}
+                  gmgnCreatedTokens={gmgnCreatedTokens}
+                />
 
                 {/* Portfolio Overview */}
-                <PortfolioOverviewSection />
+        <PortfolioOverviewSection
+          gmgnWalletHoldings={gmgnWalletHoldings}
+          gmgnCreatedTokens={gmgnCreatedTokens}
+        />
 
                 {/* Recent Activity Timeline */}
-                <RecentActivityTimeline activities={mockActivity} />
+        <RecentActivityTimeline gmgnWalletActivity={gmgnWalletActivity} />
 
                 {/* Community Reviews */}
                 <CommunityReviewsSection
@@ -343,19 +401,32 @@ function HeaderSection({
   address,
   copied,
   copy,
-  trustScore,
+  gmgnWalletStats,
 }: {
   address: string;
   copied: boolean;
   copy: () => void;
-  trustScore: number;
+  gmgnWalletStats: GmgnWalletStats | null;
 }) {
-  const badges = [
-    { label: "Verified", icon: ShieldCheck, tone: "neon" },
-    { label: "Trusted Developer", icon: Award, tone: "neon" },
-    { label: "Early Builder", icon: Rocket, tone: "blue" },
-    { label: "Community Favorite", icon: Users, tone: "neon" },
-  ];
+  // Derive trust score from GMGN data (fallback to 0 if data not available)
+  const winRate = gmgnWalletStats?.winrate ?? 0; // 0-1
+  const trustScore = Math.round(winRate * 100);
+  
+  // Determine badges based on GMGN common data
+  const badges = [];
+  if (gmgnWalletStats?.common?.is_blue_verified) {
+    badges.push({ label: "X Verified", icon: ShieldCheck, tone: "neon" });
+  }
+  if (gmgnWalletStats?.common?.created_token_count && gmgnWalletStats.common.created_token_count > 1) {
+    badges.push({ label: "Token Creator", icon: Rocket, tone: "neon" });
+  }
+  if (gmgnWalletStats?.common?.tags?.includes("smart_money")) {
+    badges.push({ label: "Smart Money", icon: Award, tone: "blue" });
+  }
+  // Always have at least one badge for visual appeal
+  if (badges.length === 0) {
+    badges.push({ label: "On-Chain", icon: ShieldCheck, tone: "neon" });
+  }
 
   return (
     <motion.section
@@ -369,9 +440,17 @@ function HeaderSection({
           {/* Left: Avatar & Info */}
           <div className="flex-1 flex items-start gap-6">
             <div className="relative shrink-0">
-              <div className="w-28 h-28 rounded-3xl border-2 border-neon/50 bg-surface-2 flex items-center justify-center font-mono text-3xl text-neon">
-                {address.slice(2, 6).toUpperCase()}
-              </div>
+              {gmgnWalletStats?.common?.avatar ? (
+                <img 
+                  src={gmgnWalletStats.common.avatar} 
+                  alt="" 
+                  className="w-28 h-28 rounded-3xl border-2 border-neon/50 object-cover"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-3xl border-2 border-neon/50 bg-surface-2 flex items-center justify-center font-mono text-3xl text-neon">
+                  {address.slice(2, 6).toUpperCase()}
+                </div>
+              )}
               <div className="absolute -bottom-3 -right-3 rounded-full bg-background p-2">
                 <span className="block w-5 h-5 rounded-full bg-neon animate-pulse" />
               </div>
@@ -390,7 +469,7 @@ function HeaderSection({
               </div>
 
               <h1 className="font-display text-3xl md:text-5xl font-black break-all mb-3">
-                {mockGmgnData.name}
+                {gmgnWalletStats?.common?.name ?? shortAddr(address)}
               </h1>
 
               <button
@@ -440,18 +519,82 @@ function HeaderSection({
   );
 }
 
-function QuickStatsSection() {
+function QuickStatsSection({
+  gmgnWalletStats,
+  gmgnCreatedTokens,
+  gmgnWalletHoldings,
+}: {
+  gmgnWalletStats: GmgnWalletStats | null;
+  gmgnCreatedTokens: GmgnCreatedTokens | null;
+  gmgnWalletHoldings: GmgnWalletHoldings | null;
+}) {
+  // Calculate wallet age from created_at (if available)
+  let walletAgeDays = 0;
+  if (gmgnWalletStats?.common?.created_at) {
+    const createdAt = new Date(gmgnWalletStats.common.created_at * 1000); // convert to ms
+    walletAgeDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+  }
+  
+  // Calculate total tokens launched
+  const tokensLaunched = gmgnCreatedTokens 
+    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0) 
+    : 0;
+  
+  const activeTokens = gmgnCreatedTokens?.open_count ?? 0;
+  const graduatedTokens = gmgnCreatedTokens?.open_count ?? 0;
+  
+  // Calculate portfolio value from holdings
+  const portfolioValue = gmgnWalletHoldings?.holdings?.reduce((sum, h) => sum + (h.usd_value ?? 0), 0) ?? 0;
+  
+  // Get highest ATH from created tokens
+  let highestAth = 0;
+  if (gmgnCreatedTokens?.creator_ath_info?.ath_mc) {
+    highestAth = parseFloat(gmgnCreatedTokens.creator_ath_info.ath_mc);
+  }
+  
   const stats = [
-    { label: "Wallet Age", value: mockGmgnData.walletAge, suffix: " days", icon: Calendar },
-    { label: "Tokens Launched", value: mockGmgnData.tokensLaunched, icon: Rocket },
-    { label: "Active Tokens", value: mockGmgnData.activeTokens, icon: Activity },
-    { label: "Graduated Tokens", value: mockGmgnData.graduatedTokens, icon: Award },
-    { label: "Community Reviews", value: mockGmgnData.communityReviews, icon: MessageSquare },
-    { label: "Avg Rating", value: mockGmgnData.averageRating, suffix: " ★", icon: Star, decimals: 1 },
-    { label: "Highest Market Cap", value: mockGmgnData.highestMarketCap / 1000000, suffix: "M", icon: TrendingUp, decimals: 2 },
-    { label: "Avg ATH", value: mockGmgnData.averageAth / 1000, suffix: "K", icon: TrendingUpIcon, decimals: 2 },
-    { label: "Portfolio Value", value: mockGmgnData.currentPortfolioValue / 1000, suffix: "K", icon: DollarSign, decimals: 1 },
-    { label: "Total Volume", value: mockGmgnData.totalTradingVolume / 1000000, suffix: "M", icon: BarChart3, decimals: 2 },
+    { 
+      label: "Wallet Age", 
+      value: walletAgeDays, 
+      suffix: " days", 
+      icon: Calendar 
+    },
+    { 
+      label: "Tokens Launched", 
+      value: tokensLaunched, 
+      icon: Rocket 
+    },
+    { 
+      label: "Active Tokens", 
+      value: activeTokens, 
+      icon: Activity 
+    },
+    { 
+      label: "Graduated Tokens", 
+      value: graduatedTokens, 
+      icon: Award 
+    },
+    { 
+      label: "Avg Rating", 
+      value: gmgnWalletStats?.winrate ? gmgnWalletStats.winrate * 5 : 0, 
+      suffix: " ★", 
+      icon: Star, 
+      decimals: 1 
+    },
+    { 
+      label: "Highest Market Cap", 
+      value: highestAth / 1000000, 
+      suffix: "M", 
+      icon: TrendingUp, 
+      decimals: 2 
+    },
+    { 
+      label: "Portfolio Value", 
+      value: portfolioValue / 1000, 
+      suffix: "K", 
+      icon: DollarSign, 
+      decimals: 1 
+    },
   ];
 
   return (
@@ -489,7 +632,28 @@ function QuickStatsSection() {
   );
 }
 
-function AISummarySection() {
+function AISummarySection({
+  gmgnWalletStats,
+  gmgnCreatedTokens,
+  gmgnWalletHoldings,
+}: {
+  gmgnWalletStats: GmgnWalletStats | null;
+  gmgnCreatedTokens: GmgnCreatedTokens | null;
+  gmgnWalletHoldings: GmgnWalletHoldings | null;
+}) {
+  const totalTokens = gmgnCreatedTokens 
+    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0) 
+    : 0;
+  
+  const highMarketCapCount = gmgnCreatedTokens?.tokens?.filter(t => t.market_cap && parseFloat(t.market_cap) > 100000).length ?? 0;
+  const veryHighMarketCapCount = gmgnCreatedTokens?.tokens?.filter(t => t.token_ath_mc && parseFloat(t.token_ath_mc) > 1000000).length ?? 0;
+  
+  // Derive risk level from wallet stats (win rate and other factors)
+  const winRate = gmgnWalletStats?.winrate ?? 0;
+  let riskLevel = "Low";
+  if (winRate < 0.3) riskLevel = "High";
+  else if (winRate < 0.6) riskLevel = "Medium";
+  
   return (
     <motion.section
       initial={{ opacity: 0, y: 40 }}
@@ -509,16 +673,21 @@ function AISummarySection() {
       <div className="p-8">
         <div className="space-y-4 text-lg leading-relaxed text-muted-foreground/90">
           <p>
-            This developer has launched <span className="text-neon font-bold">28 tokens</span> on Robinhood Chain.
+            This developer has launched <span className="text-neon font-bold">{totalTokens} tokens</span> on Robinhood Chain.
           </p>
+          {highMarketCapCount > 0 && (
+            <p>
+              <span className="text-neon font-bold">{highMarketCapCount} tokens</span> reached over $100K market cap
+              {veryHighMarketCapCount > 0 && (
+                <>
+                  , with <span className="text-neon font-bold">{veryHighMarketCapCount} tokens</span> exceeding $1M at their peak
+                </>
+              )}
+              .
+            </p>
+          )}
           <p>
-            <span className="text-neon font-bold">18 tokens</span> reached over $100K market cap, with <span className="text-neon font-bold">5 tokens</span> exceeding $1M at their peak.
-          </p>
-          <p>
-            Community sentiment is highly positive with an average rating of 4.8 stars from 47 verified reviews.
-          </p>
-          <p>
-            No suspicious liquidity removals detected. Risk Level: <span className="text-neon font-bold">Low</span>.
+            Win rate of <span className="text-neon font-bold">{Math.round(winRate * 100)}%</span>. Risk Level: <span className="text-neon font-bold">{riskLevel}</span>.
           </p>
         </div>
       </div>
@@ -526,7 +695,9 @@ function AISummarySection() {
   );
 }
 
-function LaunchHistorySection({ tokens }: { tokens: typeof mockGmgnData.tokens }) {
+function LaunchHistorySection({ gmgnCreatedTokens }: { gmgnCreatedTokens: GmgnCreatedTokens | null }) {
+  const tokens = gmgnCreatedTokens?.tokens ?? [];
+  
   return (
     <motion.section
       initial={{ opacity: 0, y: 40 }}
@@ -554,7 +725,7 @@ function LaunchHistorySection({ tokens }: { tokens: typeof mockGmgnData.tokens }
           ) : (
             <div className="space-y-4">
               {tokens.map((token, i) => (
-                <TokenCard key={token.address} token={token} index={i} />
+                <TokenCard key={token.token_address} token={token} index={i} />
               ))}
             </div>
           )}
@@ -564,7 +735,10 @@ function LaunchHistorySection({ tokens }: { tokens: typeof mockGmgnData.tokens }
   );
 }
 
-function TokenCard({ token, index }: { token: typeof mockGmgnData.tokens[0]; index: number }) {
+function TokenCard({ token, index }: { token: { token_address: string; symbol: string; create_timestamp: number; is_open: boolean; market_cap?: string; token_ath_mc?: string }; index: number }) {
+  // Determine status based on is_open
+  const status: "LIVE" | "GRADUATED" | "DEAD" = token.is_open ? "GRADUATED" : "LIVE";
+  
   const statusColors = {
     LIVE: "bg-neon/15 text-neon",
     GRADUATED: "bg-blue-400/15 text-blue-300",
@@ -577,7 +751,10 @@ function TokenCard({ token, index }: { token: typeof mockGmgnData.tokens[0]; ind
     DEAD: AlertCircle,
   };
 
-  const StatusIcon = statusIcons[token.status];
+  const StatusIcon = statusIcons[status];
+  
+  const marketCap = token.market_cap ? parseFloat(token.market_cap) : 0;
+  const athMarketCap = token.token_ath_mc ? parseFloat(token.token_ath_mc) : 0;
 
   return (
     <motion.div
@@ -597,15 +774,12 @@ function TokenCard({ token, index }: { token: typeof mockGmgnData.tokens[0]; ind
           <div className="min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-bold text-xl truncate group-hover:text-neon transition">
-                {token.name}
-              </h3>
-              <span className="font-mono text-muted-foreground text-sm">
                 {token.symbol}
-              </span>
+              </h3>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />
-              Launched {timeAgo(token.launchDate)}
+              Launched {timeAgo(token.create_timestamp * 1000)}
             </div>
           </div>
         </div>
@@ -615,38 +789,26 @@ function TokenCard({ token, index }: { token: typeof mockGmgnData.tokens[0]; ind
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Market Cap</span>
             <span className="font-mono font-bold text-neon">
-              ${token.currentMarketCap.toLocaleString()}
+              ${marketCap.toLocaleString()}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1">ATH</span>
             <span className="font-mono font-bold text-neon/80">
-              ${token.athMarketCap.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Liquidity</span>
-            <span className="font-mono font-bold">
-              ${token.liquidity.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1">24h Volume</span>
-            <span className="font-mono font-bold">
-              ${token.volume24h.toLocaleString()}
+              ${athMarketCap.toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Status & Links */}
         <div className="flex flex-col lg:flex-row items-end lg:items-center gap-3 shrink-0">
-          <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${statusColors[token.status]}`}>
+          <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${statusColors[status]}`}>
             <StatusIcon className="w-4 h-4" />
-            {token.status}
+            {status}
           </span>
           <div className="flex gap-2">
             <a
-              href={explorerAddr(token.address)}
+              href={explorerAddr(token.token_address)}
               target="_blank"
               rel="noreferrer"
               className="p-3 rounded-xl border border-border hover:border-neon hover:text-neon transition"
@@ -749,18 +911,38 @@ function TokenPerformanceCharts() {
 }
 
 function DeveloperReputationSection({
-  breakdown,
+  gmgnWalletStats,
+  gmgnCreatedTokens,
 }: {
-  breakdown: typeof mockGmgnData.reputationBreakdown;
+  gmgnWalletStats: GmgnWalletStats | null;
+  gmgnCreatedTokens: GmgnCreatedTokens | null;
 }) {
+  // Derive reputation scores from GMGN data
+  const winRate = gmgnWalletStats?.winrate ?? 0;
+  const launchSuccess = Math.round(winRate * 100);
+  
+  const totalTokens = gmgnCreatedTokens 
+    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0) 
+    : 0;
+  const openRatio = gmgnCreatedTokens?.open_ratio ? parseFloat(gmgnCreatedTokens.open_ratio) : 0;
+  const communityRating = Math.min(95, Math.round(openRatio * 100 + 50));
+  
+  const walletActivity = gmgnWalletStats?.buy_count + gmgnWalletStats?.sell_count 
+    ? Math.min(100, Math.round(Math.log10(gmgnWalletStats.buy_count + gmgnWalletStats.sell_count + 1) * 20)) 
+    : 50;
+  
+  const walletCreationTime = gmgnWalletStats?.common?.created_at;
+  let walletAgeScore = 0;
+  if (walletCreationTime) {
+    const walletAgeDays = Math.floor((Date.now() / 1000 - walletCreationTime) / (60 * 60 * 24));
+    walletAgeScore = Math.min(100, Math.round(walletAgeDays / 10));
+  }
+  
   const items = [
-    { label: "Launch Success", value: breakdown.launchSuccess, icon: Rocket },
-    { label: "Community Rating", value: breakdown.communityRating, icon: Star },
-    { label: "Wallet Activity", value: breakdown.walletActivity, icon: Activity },
-    { label: "Holder Quality", value: breakdown.holderQuality, icon: Users },
-    { label: "Volume Stability", value: breakdown.volumeStability, icon: BarChart3 },
-    { label: "Wallet Age", value: breakdown.walletAge, icon: Calendar },
-    { label: "Community Engagement", value: breakdown.communityEngagement, icon: MessageSquare },
+    { label: "Launch Success", value: launchSuccess, icon: Rocket },
+    { label: "Community Rating", value: communityRating, icon: Star },
+    { label: "Wallet Activity", value: walletActivity, icon: Activity },
+    { label: "Wallet Age", value: walletAgeScore, icon: Calendar },
   ];
 
   return (
@@ -814,14 +996,70 @@ function DeveloperReputationSection({
   );
 }
 
-function PortfolioOverviewSection() {
+function PortfolioOverviewSection({
+  gmgnWalletHoldings,
+  gmgnCreatedTokens,
+}: {
+  gmgnWalletHoldings: GmgnWalletHoldings | null;
+  gmgnCreatedTokens: GmgnCreatedTokens | null;
+}) {
+  const holdings = gmgnWalletHoldings?.holdings ?? [];
+  const totalTokens = gmgnCreatedTokens 
+    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0) 
+    : 0;
+  
+  const activeValue = holdings.reduce((sum, h) => sum + (h.usd_value ?? 0), 0);
+  
+  // Find best performer (highest profit change)
+  const bestPerformer = holdings.length 
+    ? holdings.reduce((best, h) => (h.profit_change > best.profit_change ? h : best), holdings[0]) 
+    : null;
+  
+  // Find worst performer
+  const worstPerformer = holdings.length 
+    ? holdings.reduce((worst, h) => (h.profit_change < worst.profit_change ? h : worst), holdings[0]) 
+    : null;
+  
+  // Calculate average ROI
+  const avgROI = holdings.length 
+    ? (holdings.reduce((sum, h) => sum + (h.profit_change ?? 0), 0) / holdings.length) * 100 
+    : 0;
+  
+  const bestAth = gmgnCreatedTokens?.creator_ath_info?.ath_mc 
+    ? parseFloat(gmgnCreatedTokens.creator_ath_info.ath_mc) 
+    : 0;
+  
   const portfolioItems = [
-    { label: "Total Tokens", value: mockGmgnData.tokensLaunched, icon: Layers },
-    { label: "Active Value", value: "$450K", icon: DollarSign },
-    { label: "Best Performer", value: "ROBINHOOD", icon: TrendingUp },
-    { label: "Worst Performer", value: "MEME COIN", icon: TrendingDown },
-    { label: "Avg ROI", value: "+287%", icon: TrendingUpIcon },
-    { label: "Best ATH", value: "$15M", icon: Award },
+    { 
+      label: "Total Tokens", 
+      value: totalTokens.toString(), 
+      icon: Layers 
+    },
+    { 
+      label: "Active Value", 
+      value: `$${activeValue.toLocaleString()}`, 
+      icon: DollarSign 
+    },
+    { 
+      label: "Best Performer", 
+      value: bestPerformer?.token.symbol ?? "—", 
+      icon: TrendingUp 
+    },
+    { 
+      label: "Worst Performer", 
+      value: worstPerformer?.token.symbol ?? "—", 
+      icon: TrendingDown 
+    },
+    { 
+      label: "Avg ROI", 
+      value: `${avgROI.toFixed(0)}%`, 
+      icon: TrendingUpIcon 
+    },
+    { 
+      label: "Best ATH", 
+      value: bestAth ? `$${(bestAth / 1000000).toFixed(1)}M` : "—", 
+      icon: Award 
+    },
   ];
 
   return (
@@ -866,7 +1104,50 @@ function PortfolioOverviewSection() {
   );
 }
 
-function RecentActivityTimeline({ activities }: { activities: typeof mockActivity }) {
+function RecentActivityTimeline({ gmgnWalletActivity }: { gmgnWalletActivity: GmgnWalletActivity | null }) {
+  const activities = gmgnWalletActivity?.activities ?? [];
+  
+  // Helper to get activity title and description
+  const getActivityInfo = (activity: any) => {
+    switch (activity.type) {
+      case 'buy':
+        return {
+          title: `Bought ${activity.token.symbol}`,
+          description: `Spent $${activity.cost_usd.toLocaleString()} on ${activity.token.symbol}`
+        };
+      case 'sell':
+        return {
+          title: `Sold ${activity.token.symbol}`,
+          description: `Received $${activity.cost_usd.toLocaleString()} for selling ${activity.token.symbol}`
+        };
+      case 'transferIn':
+        return {
+          title: `Received ${activity.token.symbol}`,
+          description: `Received ${activity.token_amount} ${activity.token.symbol}`
+        };
+      case 'transferOut':
+        return {
+          title: `Sent ${activity.token.symbol}`,
+          description: `Sent ${activity.token_amount} ${activity.token.symbol}`
+        };
+      case 'add':
+        return {
+          title: `Added Liquidity`,
+          description: `Added liquidity for ${activity.token.symbol}`
+        };
+      case 'remove':
+        return {
+          title: `Removed Liquidity`,
+          description: `Removed liquidity for ${activity.token.symbol}`
+        };
+      default:
+        return {
+          title: 'Activity',
+          description: 'Wallet activity'
+        };
+    }
+  };
+  
   return (
     <motion.section
       initial={{ opacity: 0, y: 40 }}
@@ -892,32 +1173,35 @@ function RecentActivityTimeline({ activities }: { activities: typeof mockActivit
             description="This wallet hasn't had any recent activity."
           />
         ) : (
-          activities.map((activity, i) => (
-            <motion.div
-              key={activity.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.75 + i * 0.1 }}
-              className="relative pl-8"
-            >
-              {/* Timeline dot */}
-              <div className="absolute left-0 top-1 w-5 h-5 rounded-full bg-neon shadow-[0_0_20px_rgba(34,211,238,0.4)]" />
-              {/* Timeline line */}
-              {i < activities.length - 1 && (
-                <div className="absolute left-2 top-6 bottom-0 w-0.5 bg-gradient-to-b from-neon to-transparent" />
-              )}
+          activities.map((activity, i) => {
+            const info = getActivityInfo(activity);
+            return (
+              <motion.div
+                key={activity.transaction_hash}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.75 + i * 0.1 }}
+                className="relative pl-8"
+              >
+                {/* Timeline dot */}
+                <div className="absolute left-0 top-1 w-5 h-5 rounded-full bg-neon shadow-[0_0_20px_rgba(34,211,238,0.4)]" />
+                {/* Timeline line */}
+                {i < activities.length - 1 && (
+                  <div className="absolute left-2 top-6 bottom-0 w-0.5 bg-gradient-to-b from-neon to-transparent" />
+                )}
 
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-lg">{activity.title}</span>
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {timeAgo(activity.timestamp)}
-                  </span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-lg">{info.title}</span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {timeAgo(activity.timestamp * 1000)}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground">{info.description}</p>
                 </div>
-                <p className="text-muted-foreground">{activity.description}</p>
-              </div>
-            </motion.div>
-          ))
+              </motion.div>
+            );
+          })
         )}
       </div>
     </motion.section>
