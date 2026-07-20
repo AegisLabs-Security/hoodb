@@ -13,13 +13,15 @@ function parseCookies(header: string | null): Record<string, string> {
   return out;
 }
 
-function errPage(message: string) {
-  return new Response(
-    `<!doctype html><meta charset="utf-8"><title>Sign-in failed</title>
-<div style="font-family:system-ui;padding:2rem;max-width:640px;margin:auto;color:#fff;background:#0a1a0e;min-height:100vh">
-<h1>Sign-in failed</h1><p>${message}</p><p><a href="/auth" style="color:#8afc7c">Try again</a></p></div>`,
-    { status: 400, headers: { "content-type": "text/html; charset=utf-8" } },
-  );
+function errRedirect(request: Request, message: string) {
+  const url = new URL(request.url);
+  const target = `${url.protocol}//${url.host}/auth?error=${encodeURIComponent(message)}`;
+  const headers = new Headers({ Location: target });
+  const clear = "Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
+  headers.append("Set-Cookie", `x_pkce=; ${clear}`);
+  headers.append("Set-Cookie", `x_state=; ${clear}`);
+  headers.append("Set-Cookie", `x_next=; ${clear}`);
+  return new Response(null, { status: 302, headers });
 }
 
 export const Route = createFileRoute("/api/public/auth/x/callback")({
