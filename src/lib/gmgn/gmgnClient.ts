@@ -22,8 +22,21 @@ import type {
 } from "./gmgnTypes";
 
 const GMGN_API_BASE = "https://gmgn.ai/api";
+const GMGN_CHAIN = (process.env.GMGN_CHAIN ?? "robinhood").toLowerCase();
+const GMGN_SUPPORTED_CHAINS = new Set([
+  "sol",
+  "bsc",
+  "base",
+  "eth",
+  "monad",
+  "tron",
+]);
 const TIMEOUT_MS = 15000;
 const MAX_RETRIES = 3;
+const PROVIDER_COOLDOWN_MS = 5 * 60 * 1000;
+
+let providerBlockedUntil = 0;
+let providerBlockedReason = "";
 
 // Utility: Sleep function for retries
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,6 +54,35 @@ const createGmgnError = (params: {
   endpoint: params.endpoint,
 });
 
+const isCloudflareBlockResponse = (status: number, bodyText: string) =>
+  status === 403 &&
+  (bodyText.includes("Attention Required! | Cloudflare") ||
+    bodyText.includes("Sorry, you have been blocked"));
+
+const getUnavailableError = (endpoint: string): GmgnError => {
+  if (!GMGN_SUPPORTED_CHAINS.has(GMGN_CHAIN)) {
+    return createGmgnError({
+      code: "UNSUPPORTED_CHAIN",
+      message: `GMGN HTTP integration is not enabled for chain "${GMGN_CHAIN}".`,
+      endpoint,
+    });
+  }
+
+  if (Date.now() < providerBlockedUntil && providerBlockedReason) {
+    return createGmgnError({
+      code: "PROVIDER_UNAVAILABLE",
+      message: providerBlockedReason,
+      endpoint,
+    });
+  }
+
+  return createGmgnError({
+    code: "PROVIDER_UNAVAILABLE",
+    message: "GMGN is temporarily unavailable.",
+    endpoint,
+  });
+};
+
 // Main fetch function (with retry, timeout) that returns Result type
 async function gmgnFetchRaw(
   endpoint: string,
@@ -49,6 +91,19 @@ async function gmgnFetchRaw(
 ): Promise<GmgnResult<unknown>> {
   const startTime = Date.now();
   const apiKey = process.env.GMGN_API_KEY;
+
+  if (!GMGN_SUPPORTED_CHAINS.has(GMGN_CHAIN)) {
+    return { success: false, error: getUnavailableError(endpoint) };
+  }
+
+  if (Date.now() < providerBlockedUntil && providerBlockedReason) {
+    gmgnLogger.info("Skipping GMGN request during provider cooldown:", {
+      endpoint,
+      chain: GMGN_CHAIN,
+      retryAt: new Date(providerBlockedUntil).toISOString(),
+    });
+    return { success: false, error: getUnavailableError(endpoint) };
+  }
 
   if (!apiKey) {
     const error = createGmgnError({
@@ -114,6 +169,22 @@ async function gmgnFetchRaw(
 
     // Check response status
     if (!res.ok) {
+      if (isCloudflareBlockResponse(res.status, bodyText)) {
+        providerBlockedUntil = Date.now() + PROVIDER_COOLDOWN_MS;
+        providerBlockedReason =
+          "GMGN upstream is blocked by Cloudflare for direct HTTP access. Data is temporarily unavailable.";
+        gmgnLogger.warn("GMGN provider blocked direct HTTP access:", {
+          endpoint,
+          chain: GMGN_CHAIN,
+          status: res.status,
+          retryAt: new Date(providerBlockedUntil).toISOString(),
+        });
+        return {
+          success: false,
+          error: getUnavailableError(endpoint),
+        };
+      }
+
       gmgnLogger.error("GMGN API error response:", {
         status: res.status,
         statusText: res.statusText,
@@ -143,7 +214,6 @@ async function gmgnFetchRaw(
       return { success: false, error };
     }
 
-    const bodyText = await res.text();
     gmgnLogger.debug("GMGN API raw response body:", bodyText);
 
     try {
@@ -277,7 +347,7 @@ async function gmgnFetchValidated<T>(
 export async function getGmgnWalletStats(walletAddress: string): Promise<GmgnResult<GmgnWalletStats>> {
   return gmgnFetchValidated(
     "/v1/user/wallet_stats",
-    { chain: "robinhood", wallet_address: walletAddress.toLowerCase(), period: "30d" },
+    { chain: GMGN_CHAIN, wallet_address: walletAddress.toLowerCase(), period: "30d" },
     GmgnWalletStatsSchema
   );
 }
@@ -285,7 +355,7 @@ export async function getGmgnWalletStats(walletAddress: string): Promise<GmgnRes
 export async function getGmgnCreatedTokens(walletAddress: string): Promise<GmgnResult<GmgnCreatedTokens>> {
   return gmgnFetchValidated(
     "/v1/user/created_tokens",
-    { chain: "robinhood", wallet_address: walletAddress.toLowerCase(), order_by: "market_cap", direction: "desc" },
+    { chain: GMGN_CHAIN, wallet_address: walletAddress.toLowerCase(), order_by: "market_cap", direction: "desc" },
     GmgnCreatedTokensSchema
   );
 }
@@ -293,7 +363,7 @@ export async function getGmgnCreatedTokens(walletAddress: string): Promise<GmgnR
 export async function getGmgnWalletHoldings(walletAddress: string): Promise<GmgnResult<GmgnWalletHoldings>> {
   return gmgnFetchValidated(
     "/v1/user/wallet_holdings",
-    { chain: "robinhood", wallet_address: walletAddress.toLowerCase(), limit: 20 },
+    { chain: GMGN_CHAIN, wallet_address: walletAddress.toLowerCase(), limit: 20 },
     GmgnWalletHoldingsSchema
   );
 }
@@ -301,7 +371,7 @@ export async function getGmgnWalletHoldings(walletAddress: string): Promise<Gmgn
 export async function getGmgnWalletActivity(walletAddress: string): Promise<GmgnResult<GmgnWalletActivity>> {
   return gmgnFetchValidated(
     "/v1/user/wallet_activity",
-    { chain: "robinhood", wallet_address: walletAddress.toLowerCase(), limit: 20 },
+    { chain: GMGN_CHAIN, wallet_address: walletAddress.toLowerCase(), limit: 20 },
     GmgnWalletActivitySchema
   );
 }
@@ -309,7 +379,7 @@ export async function getGmgnWalletActivity(walletAddress: string): Promise<Gmgn
 export async function getGmgnTokenInfo(tokenAddress: string): Promise<GmgnResult<GmgnTokenInfo>> {
   return gmgnFetchValidated(
     "/v1/token/info",
-    { chain: "robinhood", token_address: tokenAddress.toLowerCase() },
+    { chain: GMGN_CHAIN, token_address: tokenAddress.toLowerCase() },
     GmgnTokenInfoSchema
   );
 }
@@ -317,7 +387,7 @@ export async function getGmgnTokenInfo(tokenAddress: string): Promise<GmgnResult
 export async function getGmgnTokenSecurity(tokenAddress: string): Promise<GmgnResult<GmgnTokenSecurity>> {
   return gmgnFetchValidated(
     "/v1/token/security",
-    { chain: "robinhood", token_address: tokenAddress.toLowerCase() },
+    { chain: GMGN_CHAIN, token_address: tokenAddress.toLowerCase() },
     GmgnTokenSecuritySchema
   );
 }
@@ -325,7 +395,7 @@ export async function getGmgnTokenSecurity(tokenAddress: string): Promise<GmgnRe
 export async function getGmgnTokenPool(tokenAddress: string): Promise<GmgnResult<GmgnTokenPool>> {
   return gmgnFetchValidated(
     "/v1/token/pool",
-    { chain: "robinhood", token_address: tokenAddress.toLowerCase() },
+    { chain: GMGN_CHAIN, token_address: tokenAddress.toLowerCase() },
     GmgnTokenPoolSchema
   );
 }

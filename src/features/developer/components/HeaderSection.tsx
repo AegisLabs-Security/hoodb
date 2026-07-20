@@ -1,22 +1,24 @@
 import { motion } from "framer-motion";
-import { Copy, ShieldCheck, Rocket, Award, Share2, ExternalLink } from "lucide-react";
+import { Copy, ShieldCheck, Rocket, Award, Share2, ExternalLink, AlertTriangle } from "lucide-react";
 import { CircularProgress } from "@/components/CircularProgress";
 import { Chip } from "./Chip.tsx";
-import { shortAddr, explorerAddr } from "@/lib/rhc";
+import { shortAddr, explorerAddr, type DevOverview } from "@/lib/rhc";
 import type { GmgnWalletStats, GmgnResult } from "../types";
-import { unwrapGmgnResult } from "../utils";
+import { getGmgnError, unwrapGmgnResult } from "../utils";
 
 interface HeaderSectionProps {
   address: string;
   copied: boolean;
   copy: () => void;
   gmgnWalletStats: GmgnResult<GmgnWalletStats>;
+  overview: DevOverview;
 }
 
-export function HeaderSection({ address, copied, copy, gmgnWalletStats }: HeaderSectionProps) {
+export function HeaderSection({ address, copied, copy, gmgnWalletStats, overview }: HeaderSectionProps) {
   const statsData = unwrapGmgnResult(gmgnWalletStats);
+  const gmgnError = getGmgnError(gmgnWalletStats);
   // Derive trust score from GMGN data (fallback to 0 if data not available)
-  const winRate = statsData?.winrate ?? 0; // 0-1
+  const winRate = statsData?.winrate ?? overview.successRate / 100; // 0-1
   const trustScore = Math.round(winRate * 100);
 
   // Determine badges based on GMGN common data
@@ -29,6 +31,12 @@ export function HeaderSection({ address, copied, copy, gmgnWalletStats }: Header
   }
   if (statsData?.common?.tags?.includes("smart_money")) {
     badges.push({ label: "Smart Money", icon: <Award className="w-3 h-3" />, tone: "blue" as const });
+  }
+  if (!statsData && overview.verifiedContractsCount > 0) {
+    badges.push({ label: "Verified Builder", icon: <ShieldCheck className="w-3 h-3" />, tone: "neon" as const });
+  }
+  if (!statsData && overview.contractsDeployedCount > 0) {
+    badges.push({ label: "Deployer", icon: <Rocket className="w-3 h-3" />, tone: "blue" as const });
   }
   // Always have at least one badge for visual appeal
   if (badges.length === 0) {
@@ -83,6 +91,12 @@ export function HeaderSection({ address, copied, copy, gmgnWalletStats }: Header
                 {copied && <span className="text-neon font-bold">copied</span>}
               </button>
 
+              {!statsData && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Live trust signal memakai data on-chain asli dari Robinhood Chain.
+                </p>
+              )}
+
               <div className="mt-6 flex flex-wrap gap-4">
                 <button
                   onClick={copy}
@@ -110,10 +124,27 @@ export function HeaderSection({ address, copied, copy, gmgnWalletStats }: Header
 
           {/* Right: Trust Score */}
           <div className="shrink-0 flex flex-col items-center gap-4 p-6 rounded-3xl neon-panel border-neon/30">
-            <span className="text-sm text-muted-foreground uppercase tracking-widest font-semibold">
-              Trust Score
-            </span>
-            <CircularProgress value={trustScore} size={180} strokeWidth={14} />
+            {gmgnError ? (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-200">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  GMGN Unavailable
+                </div>
+                <div className="max-w-52 text-center">
+                  <div className="font-display text-3xl font-black text-neon">N/A</div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Trust score GMGN belum tersedia untuk wallet ini.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-sm text-muted-foreground uppercase tracking-widest font-semibold">
+                  Trust Score
+                </span>
+                <CircularProgress value={trustScore} size={180} strokeWidth={14} />
+              </>
+            )}
           </div>
         </div>
       </div>

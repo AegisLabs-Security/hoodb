@@ -1,25 +1,42 @@
 import { motion } from "framer-motion";
-import { Calendar, Rocket, Activity, Award, Star, TrendingUp, DollarSign } from "lucide-react";
+import { Calendar, Rocket, Activity, Award, Star, TrendingUp, DollarSign, AlertTriangle } from "lucide-react";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
+import type { DevOverview, DeployedContract } from "@/lib/rhc";
 import type { GmgnWalletStats, GmgnCreatedTokens, GmgnWalletHoldings, GmgnResult } from "../types";
-import { unwrapGmgnResult } from "../utils";
+import { getGmgnErrorMessage, unwrapGmgnResult } from "../utils";
 
 interface QuickStatsSectionProps {
   gmgnWalletStats: GmgnResult<GmgnWalletStats>;
   gmgnCreatedTokens: GmgnResult<GmgnCreatedTokens>;
   gmgnWalletHoldings: GmgnResult<GmgnWalletHoldings>;
+  overview: DevOverview;
+  contracts: DeployedContract[];
+  avgRating: number | null;
 }
 
-export function QuickStatsSection({ gmgnWalletStats, gmgnCreatedTokens, gmgnWalletHoldings }: QuickStatsSectionProps) {
+export function QuickStatsSection({
+  gmgnWalletStats,
+  gmgnCreatedTokens,
+  gmgnWalletHoldings,
+  overview,
+  contracts,
+  avgRating,
+}: QuickStatsSectionProps) {
   const statsData = unwrapGmgnResult(gmgnWalletStats);
   const createdTokensData = unwrapGmgnResult(gmgnCreatedTokens);
   const holdingsData = unwrapGmgnResult(gmgnWalletHoldings);
+  const gmgnMessage =
+    getGmgnErrorMessage(gmgnWalletStats) ??
+    getGmgnErrorMessage(gmgnCreatedTokens) ??
+    getGmgnErrorMessage(gmgnWalletHoldings);
 
   // Calculate wallet age from created_at (if available)
   let walletAgeDays = 0;
   if (statsData?.common?.created_at) {
     const createdAt = new Date(statsData.common.created_at * 1000); // convert to ms
     walletAgeDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+  } else if (overview.firstSeenAt) {
+    walletAgeDays = Math.floor((Date.now() - new Date(overview.firstSeenAt).getTime()) / (1000 * 60 * 60 * 24));
   }
 
   // Calculate total tokens launched
@@ -38,6 +55,50 @@ export function QuickStatsSection({ gmgnWalletStats, gmgnCreatedTokens, gmgnWall
   if (createdTokensData?.creator_ath_info?.ath_mc) {
     highestAth = parseFloat(createdTokensData.creator_ath_info.ath_mc);
   }
+
+  const fallbackStats = [
+    {
+      label: "Wallet Age",
+      value: walletAgeDays,
+      suffix: " days",
+      icon: <Calendar className="w-5 h-5" />,
+    },
+    {
+      label: "Transactions",
+      value: overview.txCount,
+      icon: <Activity className="w-5 h-5" />,
+    },
+    {
+      label: "Contracts",
+      value: contracts.length || overview.contractsDeployedCount,
+      icon: <Rocket className="w-5 h-5" />,
+    },
+    {
+      label: "Verified",
+      value: overview.verifiedContractsCount,
+      icon: <Award className="w-5 h-5" />,
+    },
+    {
+      label: "Success Rate",
+      value: overview.successRate,
+      suffix: "%",
+      icon: <TrendingUp className="w-5 h-5" />,
+    },
+    {
+      label: "Balance",
+      value: Number(overview.balance),
+      suffix: " RHC",
+      icon: <DollarSign className="w-5 h-5" />,
+      decimals: Number(overview.balance) < 10 ? 4 : 2,
+    },
+    {
+      label: "Avg Rating",
+      value: avgRating ?? 0,
+      suffix: avgRating ? " ★" : "",
+      icon: <Star className="w-5 h-5" />,
+      decimals: avgRating ? 1 : 0,
+    },
+  ];
 
   const stats = [
     {
@@ -83,6 +144,8 @@ export function QuickStatsSection({ gmgnWalletStats, gmgnCreatedTokens, gmgnWall
       decimals: 1,
     },
   ];
+  const displayStats =
+    statsData || createdTokensData || holdingsData ? stats : fallbackStats;
 
   return (
     <motion.section
@@ -90,8 +153,14 @@ export function QuickStatsSection({ gmgnWalletStats, gmgnCreatedTokens, gmgnWall
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
     >
+      {!statsData && !createdTokensData && !holdingsData && gmgnMessage && (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-sm text-muted-foreground">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+          <span>{gmgnMessage}</span>
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        {stats.map((stat, i) => (
+        {displayStats.map((stat, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 20 }}

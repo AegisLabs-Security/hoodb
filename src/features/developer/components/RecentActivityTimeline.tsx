@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
-import { timeAgo } from "@/lib/rhc";
+import { timeAgo, type ChainTx } from "@/lib/rhc";
 import type { GmgnWalletActivity, GmgnResult } from "../types";
-import { unwrapGmgnResult } from "../utils";
+import { getGmgnErrorMessage, unwrapGmgnResult } from "../utils";
 
 interface RecentActivityTimelineProps {
   gmgnWalletActivity: GmgnResult<GmgnWalletActivity>;
+  txs: ChainTx[];
 }
 
 // Helper to get activity title and description
@@ -50,8 +51,9 @@ const getActivityInfo = (activity: GmgnWalletActivity["activities"][0]) => {
   }
 };
 
-export function RecentActivityTimeline({ gmgnWalletActivity }: RecentActivityTimelineProps) {
+export function RecentActivityTimeline({ gmgnWalletActivity, txs }: RecentActivityTimelineProps) {
   const activityData = unwrapGmgnResult(gmgnWalletActivity);
+  const gmgnMessage = getGmgnErrorMessage(gmgnWalletActivity);
   const activities = activityData?.activities ?? [];
 
   return (
@@ -72,7 +74,50 @@ export function RecentActivityTimeline({ gmgnWalletActivity }: RecentActivityTim
       </div>
 
       <div className="space-y-8">
-        {activities.length === 0 ? (
+        {!activityData && txs.length > 0 ? (
+          <>
+            {gmgnMessage && (
+              <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-sm text-muted-foreground">
+                {gmgnMessage}
+              </div>
+            )}
+            {txs.map((tx, i) => (
+              <motion.div
+                key={tx.hash}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.75 + i * 0.08 }}
+                className="relative pl-8"
+              >
+                <div className="absolute left-0 top-1 w-5 h-5 rounded-full bg-neon shadow-[0_0_20px_rgba(34,211,238,0.4)]" />
+                {i < txs.length - 1 && (
+                  <div className="absolute left-2 top-6 bottom-0 w-0.5 bg-gradient-to-b from-neon to-transparent" />
+                )}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-lg">
+                      {tx.createdContract ? "Contract deployment" : tx.method ?? "Wallet transaction"}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {timeAgo(tx.timestamp)}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground break-all">
+                    {tx.createdContract
+                      ? `Created contract ${tx.createdContract}`
+                      : `${tx.from} → ${tx.to ?? "unknown"}${tx.value !== "0" ? ` · ${tx.value} RHC` : ""}`}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </>
+        ) : !activityData && gmgnMessage ? (
+          <EmptyState
+            icon={<Activity className="w-16 h-16" />}
+            title="Recent Activity Unavailable"
+            description={gmgnMessage}
+          />
+        ) : activities.length === 0 ? (
           <EmptyState
             icon={<Activity className="w-16 h-16" />}
             title="No Activity Yet"

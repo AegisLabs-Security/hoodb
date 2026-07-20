@@ -9,6 +9,9 @@ export const gmgnLogger = {
   info: (...args: unknown[]) => {
     console.log("[GMGN INFO]", ...args);
   },
+  warn: (...args: unknown[]) => {
+    console.warn("[GMGN WARN]", ...args);
+  },
   error: (...args: unknown[]) => {
     console.error("[GMGN ERROR]", ...args);
   },

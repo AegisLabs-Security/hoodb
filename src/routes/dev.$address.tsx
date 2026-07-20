@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { computeReputation, isValidAddress } from "@/lib/rhc";
@@ -28,6 +29,7 @@ import {
   CommunityReviewsSection,
   StickySidebar,
 } from "@/features/developer/components";
+import { getGmgnErrorMessage } from "@/features/developer/utils";
 
 export const Route = createFileRoute("/dev/$address")({
   beforeLoad: ({ params }) => {
@@ -89,6 +91,11 @@ function DevPage() {
   const { data: gmgnCreatedTokens } = useLaunchHistory(address);
   const { data: gmgnWalletHoldings } = useWalletHoldings(address);
   const { data: gmgnWalletActivity } = useWalletActivity(address);
+  const gmgnMessage =
+    getGmgnErrorMessage(gmgnWalletStats) ??
+    getGmgnErrorMessage(gmgnCreatedTokens) ??
+    getGmgnErrorMessage(gmgnWalletHoldings) ??
+    getGmgnErrorMessage(gmgnWalletActivity);
 
   const invalidateQueries = useInvalidateDeveloperQueries();
   const qc = useQueryClient();
@@ -140,10 +147,23 @@ function DevPage() {
             copied={copied}
             copy={copy}
             gmgnWalletStats={gmgnWalletStats}
+            overview={overview}
           />
 
           {/* Main Content */}
           <div className="mx-auto max-w-7xl w-full px-4 md:px-8 py-12">
+            {gmgnMessage && (
+              <div className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm text-amber-100">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-semibold">GMGN provider sedang tidak tersedia</p>
+                  <p className="mt-1 text-amber-100/80">
+                    HOODDB tetap menampilkan data on-chain dan review komunitas. Detail enrichment dari GMGN disembunyikan agar tidak memunculkan angka palsu.
+                  </p>
+                  <p className="mt-2 font-mono text-xs text-amber-100/70">{gmgnMessage}</p>
+                </div>
+              </div>
+            )}
             <div className="grid gap-8 lg:grid-cols-3">
               {/* Left Column */}
               <div className="lg:col-span-2 space-y-10">
@@ -152,6 +172,9 @@ function DevPage() {
                   gmgnWalletStats={gmgnWalletStats}
                   gmgnCreatedTokens={gmgnCreatedTokens}
                   gmgnWalletHoldings={gmgnWalletHoldings}
+                  overview={overview}
+                  contracts={contracts}
+                  avgRating={avg}
                 />
 
                 {/* AI Summary */}
@@ -159,25 +182,39 @@ function DevPage() {
                   gmgnWalletStats={gmgnWalletStats}
                   gmgnCreatedTokens={gmgnCreatedTokens}
                   gmgnWalletHoldings={gmgnWalletHoldings}
+                  overview={overview}
+                  contracts={contracts}
+                  avgRating={avg}
+                  reviewCount={reviews.length}
                 />
 
                 {/* Launch History */}
-                <LaunchHistorySection gmgnCreatedTokens={gmgnCreatedTokens} />
+                <LaunchHistorySection
+                  gmgnCreatedTokens={gmgnCreatedTokens}
+                  deployedContracts={contracts}
+                />
 
                 {/* Developer Reputation */}
                 <DeveloperReputationSection
                   gmgnWalletStats={gmgnWalletStats}
                   gmgnCreatedTokens={gmgnCreatedTokens}
+                  reputationBreakdown={rep}
                 />
 
                 {/* Portfolio Overview */}
                 <PortfolioOverviewSection
                   gmgnWalletHoldings={gmgnWalletHoldings}
                   gmgnCreatedTokens={gmgnCreatedTokens}
+                  overview={overview}
+                  txs={txs}
+                  contracts={contracts}
                 />
 
                 {/* Recent Activity Timeline */}
-                <RecentActivityTimeline gmgnWalletActivity={gmgnWalletActivity} />
+                <RecentActivityTimeline
+                  gmgnWalletActivity={gmgnWalletActivity}
+                  txs={txs}
+                />
 
                 {/* Community Reviews */}
                 <CommunityReviewsSection
