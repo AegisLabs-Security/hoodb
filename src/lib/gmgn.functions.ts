@@ -16,8 +16,13 @@ async function gmgnFetch<T>(
   endpoint: string,
   params?: Record<string, string | number>
 ): Promise<T> {
+  console.log("[gmgnFetch] Calling", endpoint);
+
   const apiKey = process.env.GMGN_API_KEY;
-  if (!apiKey) throw new Error("GMGN_API_KEY not set");
+  if (!apiKey) {
+    console.error("[gmgnFetch] ERROR: GMGN_API_KEY not set!");
+    throw new Error("GMGN_API_KEY not set");
+  }
 
   const url = new URL(`${GMGN_API_BASE}${endpoint}`);
   if (params) {
@@ -25,6 +30,7 @@ async function gmgnFetch<T>(
       url.searchParams.append(key, String(value))
     );
   }
+  console.log("[gmgnFetch] URL:", url.toString());
 
   const res = await fetch(url.toString(), {
     headers: {
@@ -33,14 +39,19 @@ async function gmgnFetch<T>(
     },
   });
 
+  console.log("[gmgnFetch] Response status:", res.status);
+
   if (!res.ok) {
     const text = await res.text();
+    console.error("[gmgnFetch] Response body:", text);
     throw new Error(
       `GMGN API error ${res.status} on ${endpoint}: ${text.slice(0, 200)}`
     );
   }
 
-  return (await res.json()) as T;
+  const json = await res.json();
+  console.log("[gmgnFetch] Response:", json);
+  return json as T;
 }
 
 const addrSchema = z.object({ address: z.string() });
