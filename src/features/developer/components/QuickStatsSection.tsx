@@ -1,0 +1,115 @@
+import { motion } from "framer-motion";
+import { Calendar, Rocket, Activity, Award, Star, TrendingUp, DollarSign } from "lucide-react";
+import { AnimatedCounter } from "@/components/AnimatedCounter";
+import type { GmgnWalletStats, GmgnCreatedTokens, GmgnWalletHoldings } from "../types";
+
+interface QuickStatsSectionProps {
+  gmgnWalletStats: GmgnWalletStats | null;
+  gmgnCreatedTokens: GmgnCreatedTokens | null;
+  gmgnWalletHoldings: GmgnWalletHoldings | null;
+}
+
+export function QuickStatsSection({ gmgnWalletStats, gmgnCreatedTokens, gmgnWalletHoldings }: QuickStatsSectionProps) {
+  // Calculate wallet age from created_at (if available)
+  let walletAgeDays = 0;
+  if (gmgnWalletStats?.common?.created_at) {
+    const createdAt = new Date(gmgnWalletStats.common.created_at * 1000); // convert to ms
+    walletAgeDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  // Calculate total tokens launched
+  const tokensLaunched = gmgnCreatedTokens
+    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0)
+    : 0;
+
+  const activeTokens = gmgnCreatedTokens?.open_count ?? 0;
+  const graduatedTokens = gmgnCreatedTokens?.open_count ?? 0;
+
+  // Calculate portfolio value from holdings
+  const portfolioValue = gmgnWalletHoldings?.holdings?.reduce((sum, h) => sum + (h.usd_value ?? 0), 0) ?? 0;
+
+  // Get highest ATH from created tokens
+  let highestAth = 0;
+  if (gmgnCreatedTokens?.creator_ath_info?.ath_mc) {
+    highestAth = parseFloat(gmgnCreatedTokens.creator_ath_info.ath_mc);
+  }
+
+  const stats = [
+    {
+      label: "Wallet Age",
+      value: walletAgeDays,
+      suffix: " days",
+      icon: <Calendar className="w-5 h-5" />,
+    },
+    {
+      label: "Tokens Launched",
+      value: tokensLaunched,
+      icon: <Rocket className="w-5 h-5" />,
+    },
+    {
+      label: "Active Tokens",
+      value: activeTokens,
+      icon: <Activity className="w-5 h-5" />,
+    },
+    {
+      label: "Graduated Tokens",
+      value: graduatedTokens,
+      icon: <Award className="w-5 h-5" />,
+    },
+    {
+      label: "Avg Rating",
+      value: gmgnWalletStats?.winrate ? gmgnWalletStats.winrate * 5 : 0,
+      suffix: " ★",
+      icon: <Star className="w-5 h-5" />,
+      decimals: 1,
+    },
+    {
+      label: "Highest Market Cap",
+      value: highestAth / 1000000,
+      suffix: "M",
+      icon: <TrendingUp className="w-5 h-5" />,
+      decimals: 2,
+    },
+    {
+      label: "Portfolio Value",
+      value: portfolioValue / 1000,
+      suffix: "K",
+      icon: <DollarSign className="w-5 h-5" />,
+      decimals: 1,
+    },
+  ];
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+    >
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 + i * 0.05 }}
+            className="neon-panel rounded-2xl p-6 hover:border-neon/40 transition-all duration-300"
+          >
+            <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-muted-foreground mb-4">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-neon/10 text-neon">
+                {stat.icon}
+              </div>
+              {stat.label}
+            </div>
+            <div className="font-display font-black text-3xl md:text-4xl">
+              <AnimatedCounter
+                end={stat.value}
+                suffix={stat.suffix}
+                decimals={stat.decimals || 0}
+              />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </motion.section>
+  );
+}
