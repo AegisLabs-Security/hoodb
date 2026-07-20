@@ -23,9 +23,7 @@ export const listReviews = createServerFn({ method: "GET" })
     const addr = normalizeAddress(data.address);
     const { data: rows, error } = await supabase
       .from("reviews")
-      .select(
-        "id, dev_address, author_id, rating, content, created_at, profiles:profiles!reviews_author_id_fkey(x_handle, x_name, x_avatar_url, x_verified)",
-      )
+      .select("id, dev_address, author_id, rating, content, created_at")
       .eq("dev_address", addr)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -33,18 +31,30 @@ export const listReviews = createServerFn({ method: "GET" })
       console.error("[listReviews]", error);
       return [];
     }
-    return (rows ?? []).map((r: any) => ({
-      id: r.id,
-      dev_address: r.dev_address,
-      author_id: r.author_id,
-      rating: r.rating,
-      content: r.content,
-      created_at: r.created_at,
-      x_handle: r.profiles?.x_handle ?? null,
-      x_name: r.profiles?.x_name ?? null,
-      x_avatar_url: r.profiles?.x_avatar_url ?? null,
-      x_verified: !!r.profiles?.x_verified,
-    }));
+    const authorIds = Array.from(new Set((rows ?? []).map((r: any) => r.author_id)));
+    let profileMap: Record<string, any> = {};
+    if (authorIds.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, x_handle, x_name, x_avatar_url, x_verified")
+        .in("id", authorIds);
+      for (const p of profs ?? []) profileMap[(p as any).id] = p;
+    }
+    return (rows ?? []).map((r: any) => {
+      const p = profileMap[r.author_id] ?? {};
+      return {
+        id: r.id,
+        dev_address: r.dev_address,
+        author_id: r.author_id,
+        rating: r.rating,
+        content: r.content,
+        created_at: r.created_at,
+        x_handle: p.x_handle ?? null,
+        x_name: p.x_name ?? null,
+        x_avatar_url: p.x_avatar_url ?? null,
+        x_verified: !!p.x_verified,
+      };
+    });
   });
 
 /* ---------- Auth: post a review ---------- */
