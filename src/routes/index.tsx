@@ -22,7 +22,15 @@ import {
   Users,
   Zap,
   Globe2,
+  Copy,
+  Check,
+  ShoppingBag,
+  CandlestickChart,
 } from "lucide-react";
+
+const HOODDB_TOKEN_CA = "0x7441c2058bf785c6e740e1ecb326f2c9f3f445dd";
+const HOODDB_BUY_URL = "https://ponsfamily.com/launchpad/0x7441c2058bf785c6e740e1Ecb326f2C9f3F445DD";
+const HOODDB_CHART_URL = "https://dexscreener.com/robinhood/0x1846324277e9e772a9a0d45b430f835f51c2c978";
 
 function ClientOnly({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
@@ -100,6 +108,7 @@ function Home() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [copiedCa, setCopiedCa] = useState(false);
 
   const { data: stats } = useSuspenseQuery(globalStatsQO);
   const { data: latest } = useSuspenseQuery(latestTxsQO);
@@ -112,6 +121,16 @@ function Home() {
     if (!v) return setErr("Enter a Robinhood Chain wallet address");
     if (!isValidAddress(v)) return setErr("Not a valid EVM address (0x… 42 chars).");
     navigate({ to: "/dev/$address", params: { address: v.toLowerCase() } });
+  };
+
+  const copyTokenAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(HOODDB_TOKEN_CA);
+      setCopiedCa(true);
+      window.setTimeout(() => setCopiedCa(false), 2000);
+    } catch (error) {
+      console.error("[copyTokenAddress]", error);
+    }
   };
 
   const cards: DevCardData[] = tracked.list.slice(0, 9).map((d) => {
@@ -173,6 +192,55 @@ function Home() {
               </button>
             </form>
             {err && <div className="mt-2 text-sm text-red-400">{err}</div>}
+
+            <div className="mt-6 max-w-2xl rounded-2xl border border-neon/30 bg-surface/70 p-4 backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-neon">
+                    $HOODDB Token
+                  </div>
+                  <div className="mt-2 font-display text-2xl font-black text-foreground">
+                    Contract Address
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={HOODDB_BUY_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 font-semibold text-primary-foreground transition hover:brightness-110"
+                  >
+                    <ShoppingBag className="size-4" />
+                    Buy
+                  </a>
+                  <a
+                    href={HOODDB_CHART_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-11 items-center gap-2 rounded-xl border border-neon/30 px-4 font-semibold text-neon transition hover:bg-neon/10"
+                  >
+                    <CandlestickChart className="size-4" />
+                    Chart
+                  </a>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0 rounded-xl border border-white/5 bg-background/50 px-4 py-3 font-mono text-sm text-foreground">
+                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
+                    {HOODDB_TOKEN_CA}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyTokenAddress}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border/60 px-4 font-semibold text-muted-foreground transition hover:border-neon hover:text-neon"
+                >
+                  {copiedCa ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  {copiedCa ? "Copied" : "Copy CA"}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-3">
