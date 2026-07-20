@@ -1,14 +1,21 @@
 import { useSuspenseQuery, useQuery, useQueryClient, queryOptions } from "@tanstack/react-query";
 import {
-  getGmgnWalletStats,
-  getGmgnCreatedTokens,
-  getGmgnWalletHoldings,
-  getGmgnWalletActivity,
+  getGmgnWalletStatsFn,
+  getGmgnCreatedTokensFn,
+  getGmgnWalletHoldingsFn,
+  getGmgnWalletActivityFn,
   getDevOverview,
   getAddressTxs,
   getDeployedContracts,
   listReviews,
 } from "../api";
+import type {
+  GmgnWalletStats,
+  GmgnCreatedTokens,
+  GmgnWalletHoldings,
+  GmgnWalletActivity,
+  GmgnResult,
+} from "../types";
 
 // Query Options Factory
 export const developerQueryOptions = (address: string) => {
@@ -41,25 +48,25 @@ export const developerQueryOptions = (address: string) => {
     }),
     gmgnWalletStats: queryOptions({
       queryKey: ["developer", "gmgnWalletStats", normalizedAddress],
-      queryFn: () => getGmgnWalletStats({ data: { address: normalizedAddress } }),
+      queryFn: (): Promise<GmgnResult<GmgnWalletStats>> => getGmgnWalletStatsFn({ data: { address: normalizedAddress } }),
       refetchInterval: 30_000,
       staleTime: 15_000,
     }),
     gmgnCreatedTokens: queryOptions({
       queryKey: ["developer", "gmgnCreatedTokens", normalizedAddress],
-      queryFn: () => getGmgnCreatedTokens({ data: { address: normalizedAddress } }),
+      queryFn: (): Promise<GmgnResult<GmgnCreatedTokens>> => getGmgnCreatedTokensFn({ data: { address: normalizedAddress } }),
       refetchInterval: 30_000,
       staleTime: 15_000,
     }),
     gmgnWalletHoldings: queryOptions({
       queryKey: ["developer", "gmgnWalletHoldings", normalizedAddress],
-      queryFn: () => getGmgnWalletHoldings({ data: { address: normalizedAddress } }),
+      queryFn: (): Promise<GmgnResult<GmgnWalletHoldings>> => getGmgnWalletHoldingsFn({ data: { address: normalizedAddress } }),
       refetchInterval: 30_000,
       staleTime: 15_000,
     }),
     gmgnWalletActivity: queryOptions({
       queryKey: ["developer", "gmgnWalletActivity", normalizedAddress],
-      queryFn: () => getGmgnWalletActivity({ data: { address: normalizedAddress } }),
+      queryFn: (): Promise<GmgnResult<GmgnWalletActivity>> => getGmgnWalletActivityFn({ data: { address: normalizedAddress } }),
       refetchInterval: 30_000,
       staleTime: 15_000,
     }),

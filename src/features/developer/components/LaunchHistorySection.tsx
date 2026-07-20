@@ -2,14 +2,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Rocket } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { TokenCard } from "./TokenCard.tsx";
-import type { GmgnCreatedTokens } from "../types";
+import type { GmgnCreatedTokens, GmgnResult } from "../types";
+import { unwrapGmgnResult } from "../utils";
 
 interface LaunchHistorySectionProps {
-  gmgnCreatedTokens: GmgnCreatedTokens | null;
+  gmgnCreatedTokens: GmgnResult<GmgnCreatedTokens>;
 }
 
 export function LaunchHistorySection({ gmgnCreatedTokens }: LaunchHistorySectionProps) {
-  const tokens = gmgnCreatedTokens?.tokens ?? [];
+  const createdTokensData = unwrapGmgnResult(gmgnCreatedTokens);
+  const tokens = createdTokensData?.tokens ?? [];
 
   return (
     <motion.section

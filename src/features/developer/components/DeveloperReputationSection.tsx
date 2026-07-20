@@ -1,25 +1,28 @@
 import { motion } from "framer-motion";
 import { Award, Rocket, Star, Activity, Calendar } from "lucide-react";
-import type { GmgnWalletStats, GmgnCreatedTokens } from "../types";
+import type { GmgnWalletStats, GmgnCreatedTokens, GmgnResult } from "../types";
+import { unwrapGmgnResult } from "../utils";
 
 interface DeveloperReputationSectionProps {
-  gmgnWalletStats: GmgnWalletStats | null;
-  gmgnCreatedTokens: GmgnCreatedTokens | null;
+  gmgnWalletStats: GmgnResult<GmgnWalletStats>;
+  gmgnCreatedTokens: GmgnResult<GmgnCreatedTokens>;
 }
 
 export function DeveloperReputationSection({ gmgnWalletStats, gmgnCreatedTokens }: DeveloperReputationSectionProps) {
+  const statsData = unwrapGmgnResult(gmgnWalletStats);
+  const createdTokensData = unwrapGmgnResult(gmgnCreatedTokens);
   // Derive reputation scores from GMGN data
-  const winRate = gmgnWalletStats?.winrate ?? 0;
+  const winRate = statsData?.winrate ?? 0;
   const launchSuccess = Math.round(winRate * 100);
 
-  const totalTokens = gmgnCreatedTokens
-    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0)
+  const totalTokens = createdTokensData
+    ? (createdTokensData.inner_count ?? 0) + (createdTokensData.open_count ?? 0)
     : 0;
-  const openRatio = gmgnCreatedTokens?.open_ratio ? parseFloat(gmgnCreatedTokens.open_ratio) : 0;
+  const openRatio = createdTokensData?.open_ratio ? parseFloat(createdTokensData.open_ratio) : 0;
   const communityRating = Math.min(95, Math.round(openRatio * 100 + 50));
 
-  const buyCount = gmgnWalletStats?.buy_count ?? 0;
-  const sellCount = gmgnWalletStats?.sell_count ?? 0;
+  const buyCount = statsData?.buy_count ?? 0;
+  const sellCount = statsData?.sell_count ?? 0;
 
   const totalActivity = buyCount + sellCount;
 
@@ -31,7 +34,7 @@ export function DeveloperReputationSection({ gmgnWalletStats, gmgnCreatedTokens 
         )
       : 50;
 
-  const walletCreationTime = gmgnWalletStats?.common?.created_at;
+  const walletCreationTime = statsData?.common?.created_at;
   let walletAgeScore = 0;
   if (walletCreationTime) {
     const walletAgeDays = Math.floor((Date.now() / 1000 - walletCreationTime) / (60 * 60 * 24));

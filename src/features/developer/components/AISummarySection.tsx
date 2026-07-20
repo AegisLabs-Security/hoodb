@@ -1,23 +1,26 @@
 import { motion } from "framer-motion";
 import { Bot } from "lucide-react";
-import type { GmgnWalletStats, GmgnCreatedTokens, GmgnWalletHoldings } from "../types";
+import type { GmgnWalletStats, GmgnCreatedTokens, GmgnWalletHoldings, GmgnResult } from "../types";
+import { unwrapGmgnResult } from "../utils";
 
 interface AISummarySectionProps {
-  gmgnWalletStats: GmgnWalletStats | null;
-  gmgnCreatedTokens: GmgnCreatedTokens | null;
-  gmgnWalletHoldings: GmgnWalletHoldings | null;
+  gmgnWalletStats: GmgnResult<GmgnWalletStats>;
+  gmgnCreatedTokens: GmgnResult<GmgnCreatedTokens>;
+  gmgnWalletHoldings: GmgnResult<GmgnWalletHoldings>;
 }
 
 export function AISummarySection({ gmgnWalletStats, gmgnCreatedTokens, gmgnWalletHoldings }: AISummarySectionProps) {
-  const totalTokens = gmgnCreatedTokens
-    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0)
+  const statsData = unwrapGmgnResult(gmgnWalletStats);
+  const createdTokensData = unwrapGmgnResult(gmgnCreatedTokens);
+  const totalTokens = createdTokensData
+    ? (createdTokensData.inner_count ?? 0) + (createdTokensData.open_count ?? 0)
     : 0;
 
-  const highMarketCapCount = gmgnCreatedTokens?.tokens?.filter((t) => t.market_cap && parseFloat(t.market_cap) > 100000).length ?? 0;
-  const veryHighMarketCapCount = gmgnCreatedTokens?.tokens?.filter((t) => t.token_ath_mc && parseFloat(t.token_ath_mc) > 1000000).length ?? 0;
+  const highMarketCapCount = createdTokensData?.tokens?.filter((t) => t.market_cap && parseFloat(t.market_cap) > 100000).length ?? 0;
+  const veryHighMarketCapCount = createdTokensData?.tokens?.filter((t) => t.token_ath_mc && parseFloat(t.token_ath_mc) > 1000000).length ?? 0;
 
   // Derive risk level from wallet stats (win rate and other factors)
-  const winRate = gmgnWalletStats?.winrate ?? 0;
+  const winRate = statsData?.winrate ?? 0;
   let riskLevel = "Low";
   if (winRate < 0.3) riskLevel = "High";
   else if (winRate < 0.6) riskLevel = "Medium";

@@ -1,16 +1,19 @@
 import { motion } from "framer-motion";
 import { Wallet, Layers, DollarSign, TrendingUp, TrendingDown, Award } from "lucide-react";
-import type { GmgnWalletHoldings, GmgnCreatedTokens } from "../types";
+import type { GmgnWalletHoldings, GmgnCreatedTokens, GmgnResult } from "../types";
+import { unwrapGmgnResult } from "../utils";
 
 interface PortfolioOverviewSectionProps {
-  gmgnWalletHoldings: GmgnWalletHoldings | null;
-  gmgnCreatedTokens: GmgnCreatedTokens | null;
+  gmgnWalletHoldings: GmgnResult<GmgnWalletHoldings>;
+  gmgnCreatedTokens: GmgnResult<GmgnCreatedTokens>;
 }
 
 export function PortfolioOverviewSection({ gmgnWalletHoldings, gmgnCreatedTokens }: PortfolioOverviewSectionProps) {
-  const holdings = gmgnWalletHoldings?.holdings ?? [];
-  const totalTokens = gmgnCreatedTokens
-    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0)
+  const holdingsData = unwrapGmgnResult(gmgnWalletHoldings);
+  const createdTokensData = unwrapGmgnResult(gmgnCreatedTokens);
+  const holdings = holdingsData?.holdings ?? [];
+  const totalTokens = createdTokensData
+    ? (createdTokensData.inner_count ?? 0) + (createdTokensData.open_count ?? 0)
     : 0;
 
   const activeValue = holdings.reduce((sum, h) => sum + (h.usd_value ?? 0), 0);
@@ -30,8 +33,8 @@ export function PortfolioOverviewSection({ gmgnWalletHoldings, gmgnCreatedTokens
     ? (holdings.reduce((sum, h) => sum + (h.profit_change ?? 0), 0) / holdings.length) * 100
     : 0;
 
-  const bestAth = gmgnCreatedTokens?.creator_ath_info?.ath_mc
-    ? parseFloat(gmgnCreatedTokens.creator_ath_info.ath_mc)
+  const bestAth = createdTokensData?.creator_ath_info?.ath_mc
+    ? parseFloat(createdTokensData.creator_ath_info.ath_mc)
     : 0;
 
   const portfolioItems = [

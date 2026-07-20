@@ -2,10 +2,11 @@ import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { timeAgo } from "@/lib/rhc";
-import type { GmgnWalletActivity } from "../types";
+import type { GmgnWalletActivity, GmgnResult } from "../types";
+import { unwrapGmgnResult } from "../utils";
 
 interface RecentActivityTimelineProps {
-  gmgnWalletActivity: GmgnWalletActivity | null;
+  gmgnWalletActivity: GmgnResult<GmgnWalletActivity>;
 }
 
 // Helper to get activity title and description
@@ -50,7 +51,8 @@ const getActivityInfo = (activity: GmgnWalletActivity["activities"][0]) => {
 };
 
 export function RecentActivityTimeline({ gmgnWalletActivity }: RecentActivityTimelineProps) {
-  const activities = gmgnWalletActivity?.activities ?? [];
+  const activityData = unwrapGmgnResult(gmgnWalletActivity);
+  const activities = activityData?.activities ?? [];
 
   return (
     <motion.section

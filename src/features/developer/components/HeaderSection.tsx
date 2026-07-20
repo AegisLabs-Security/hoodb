@@ -3,29 +3,31 @@ import { Copy, ShieldCheck, Rocket, Award, Share2, ExternalLink } from "lucide-r
 import { CircularProgress } from "@/components/CircularProgress";
 import { Chip } from "./Chip.tsx";
 import { shortAddr, explorerAddr } from "@/lib/rhc";
-import type { GmgnWalletStats } from "../types";
+import type { GmgnWalletStats, GmgnResult } from "../types";
+import { unwrapGmgnResult } from "../utils";
 
 interface HeaderSectionProps {
   address: string;
   copied: boolean;
   copy: () => void;
-  gmgnWalletStats: GmgnWalletStats | null;
+  gmgnWalletStats: GmgnResult<GmgnWalletStats>;
 }
 
 export function HeaderSection({ address, copied, copy, gmgnWalletStats }: HeaderSectionProps) {
+  const statsData = unwrapGmgnResult(gmgnWalletStats);
   // Derive trust score from GMGN data (fallback to 0 if data not available)
-  const winRate = gmgnWalletStats?.winrate ?? 0; // 0-1
+  const winRate = statsData?.winrate ?? 0; // 0-1
   const trustScore = Math.round(winRate * 100);
 
   // Determine badges based on GMGN common data
   const badges = [];
-  if (gmgnWalletStats?.common?.is_blue_verified) {
+  if (statsData?.common?.is_blue_verified) {
     badges.push({ label: "X Verified", icon: <ShieldCheck className="w-3 h-3" />, tone: "neon" as const });
   }
-  if (gmgnWalletStats?.common?.created_token_count && gmgnWalletStats.common.created_token_count > 1) {
+  if (statsData?.common?.created_token_count && statsData.common.created_token_count > 1) {
     badges.push({ label: "Token Creator", icon: <Rocket className="w-3 h-3" />, tone: "neon" as const });
   }
-  if (gmgnWalletStats?.common?.tags?.includes("smart_money")) {
+  if (statsData?.common?.tags?.includes("smart_money")) {
     badges.push({ label: "Smart Money", icon: <Award className="w-3 h-3" />, tone: "blue" as const });
   }
   // Always have at least one badge for visual appeal
@@ -45,9 +47,9 @@ export function HeaderSection({ address, copied, copy, gmgnWalletStats }: Header
           {/* Left: Avatar & Info */}
           <div className="flex-1 flex items-start gap-6">
             <div className="relative shrink-0">
-              {gmgnWalletStats?.common?.avatar ? (
+              {statsData?.common?.avatar ? (
                 <img
-                  src={gmgnWalletStats.common.avatar}
+                  src={statsData.common.avatar}
                   alt=""
                   className="w-28 h-28 rounded-3xl border-2 border-neon/50 object-cover"
                 />
@@ -69,7 +71,7 @@ export function HeaderSection({ address, copied, copy, gmgnWalletStats }: Header
               </div>
 
               <h1 className="font-display text-3xl md:text-5xl font-black break-all mb-3">
-                {gmgnWalletStats?.common?.name ?? shortAddr(address)}
+                {statsData?.common?.name ?? shortAddr(address)}
               </h1>
 
               <button

@@ -1,4 +1,3 @@
-// GMGN API Functions
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type {
@@ -9,192 +8,76 @@ import type {
   GmgnTokenInfo,
   GmgnTokenSecurity,
   GmgnTokenPool,
+  GmgnResult,
 } from "../types";
+import {
+  getGmgnWalletStats,
+  getGmgnCreatedTokens,
+  getGmgnWalletHoldings,
+  getGmgnWalletActivity,
+  getGmgnTokenInfo,
+  getGmgnTokenSecurity,
+  getGmgnTokenPool,
+} from "../../../lib/gmgn/gmgnClient";
+import { gmgnLogger } from "../../../lib/gmgn/gmgnLogger";
 
-const GMGN_API_BASE = "https://gmgn.ai/api";
+const addrSchema = z.object({ address: z.string().min(1) });
 
-async function gmgnFetch<T>(
-  endpoint: string,
-  params?: Record<string, string | number>
-): Promise<T> {
-  console.log("[gmgnFetch] Calling", endpoint);
-
-  const apiKey = process.env.GMGN_API_KEY;
-  if (!apiKey) {
-    console.error("[gmgnFetch] ERROR: GMGN_API_KEY not set!");
-    throw new Error("GMGN_API_KEY not set");
-  }
-
-  const url = new URL(`${GMGN_API_BASE}${endpoint}`);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) =>
-      url.searchParams.append(key, String(value))
-    );
-  }
-  console.log("[gmgnFetch] URL:", url.toString());
-
-  const res = await fetch(url.toString(), {
-    headers: {
-      accept: "application/json",
-      "X-API-Key": apiKey,
-    },
-  });
-
-  console.log("[gmgnFetch] Response status:", res.status);
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("[gmgnFetch] Response body:", text);
-    throw new Error(
-      `GMGN API error ${res.status} on ${endpoint}: ${text.slice(0, 200)}`
-    );
-  }
-
-  const json = await res.json();
-  console.log("[gmgnFetch] Response:", json);
-  return json as T;
-}
-
-const addrSchema = z.object({ address: z.string() });
-
-export const getGmgnWalletStats = createServerFn({ method: "GET" })
+export const getGmgnWalletStatsFn = createServerFn({ method: "GET" })
   .validator((d: { address: string }) => addrSchema.parse(d))
-  .handler(async ({ data }): Promise<GmgnWalletStats | null> => {
-    try {
-      const res = await gmgnFetch<{ code: number; data: GmgnWalletStats }>(
-        "/v1/user/wallet_stats",
-        {
-          chain: "robinhood",
-          wallet_address: data.address,
-          period: "30d",
-        }
-      );
-      return res.data;
-    } catch (e) {
-      console.error("[getGmgnWalletStats]", e);
-      return null;
-    }
+  .handler(async ({ data }): Promise<GmgnResult<GmgnWalletStats>> => {
+    gmgnLogger.info("getGmgnWalletStats called for:", data.address);
+    return getGmgnWalletStats(data.address);
   });
 
-export const getGmgnCreatedTokens = createServerFn({ method: "GET" })
+export const getGmgnCreatedTokensFn = createServerFn({ method: "GET" })
   .validator((d: { address: string }) => addrSchema.parse(d))
-  .handler(async ({ data }): Promise<GmgnCreatedTokens | null> => {
-    try {
-      const res = await gmgnFetch<{ code: number; data: GmgnCreatedTokens }>(
-        "/v1/user/created_tokens",
-        {
-          chain: "robinhood",
-          wallet_address: data.address,
-          order_by: "market_cap",
-          direction: "desc",
-        }
-      );
-      return res.data;
-    } catch (e) {
-      console.error("[getGmgnCreatedTokens]", e);
-      return null;
-    }
+  .handler(async ({ data }): Promise<GmgnResult<GmgnCreatedTokens>> => {
+    gmgnLogger.info("getGmgnCreatedTokens called for:", data.address);
+    return getGmgnCreatedTokens(data.address);
   });
 
-export const getGmgnWalletHoldings = createServerFn({ method: "GET" })
+export const getGmgnWalletHoldingsFn = createServerFn({ method: "GET" })
   .validator((d: { address: string }) => addrSchema.parse(d))
-  .handler(async ({ data }): Promise<GmgnWalletHoldings | null> => {
-    try {
-      const res = await gmgnFetch<{ code: number; data: GmgnWalletHoldings }>(
-        "/v1/user/wallet_holdings",
-        {
-          chain: "robinhood",
-          wallet_address: data.address,
-          limit: 20,
-        }
-      );
-      return res.data;
-    } catch (e) {
-      console.error("[getGmgnWalletHoldings]", e);
-      return null;
-    }
+  .handler(async ({ data }): Promise<GmgnResult<GmgnWalletHoldings>> => {
+    gmgnLogger.info("getGmgnWalletHoldings called for:", data.address);
+    return getGmgnWalletHoldings(data.address);
   });
 
-export const getGmgnWalletActivity = createServerFn({ method: "GET" })
+export const getGmgnWalletActivityFn = createServerFn({ method: "GET" })
   .validator((d: { address: string }) => addrSchema.parse(d))
-  .handler(async ({ data }): Promise<GmgnWalletActivity | null> => {
-    try {
-      const res = await gmgnFetch<{ code: number; data: GmgnWalletActivity }>(
-        "/v1/user/wallet_activity",
-        {
-          chain: "robinhood",
-          wallet_address: data.address,
-          limit: 20,
-        }
-      );
-      return res.data;
-    } catch (e) {
-      console.error("[getGmgnWalletActivity]", e);
-      return null;
-    }
+  .handler(async ({ data }): Promise<GmgnResult<GmgnWalletActivity>> => {
+    gmgnLogger.info("getGmgnWalletActivity called for:", data.address);
+    return getGmgnWalletActivity(data.address);
   });
 
-export const getGmgnTokenInfo = createServerFn({ method: "GET" })
+export const getGmgnTokenInfoFn = createServerFn({ method: "GET" })
   .validator((d: { address: string }) => addrSchema.parse(d))
-  .handler(async ({ data }): Promise<GmgnTokenInfo | null> => {
-    try {
-      const res = await gmgnFetch<{ code: number; data: GmgnTokenInfo }>(
-        "/v1/token/info",
-        {
-          chain: "robinhood",
-          token_address: data.address,
-        }
-      );
-      return res.data;
-    } catch (e) {
-      console.error("[getGmgnTokenInfo]", e);
-      return null;
-    }
+  .handler(async ({ data }): Promise<GmgnResult<GmgnTokenInfo>> => {
+    gmgnLogger.info("getGmgnTokenInfo called for:", data.address);
+    return getGmgnTokenInfo(data.address);
   });
 
-export const getGmgnTokenSecurity = createServerFn({ method: "GET" })
+export const getGmgnTokenSecurityFn = createServerFn({ method: "GET" })
   .validator((d: { address: string }) => addrSchema.parse(d))
-  .handler(async ({ data }): Promise<GmgnTokenSecurity | null> => {
-    try {
-      const res = await gmgnFetch<{ code: number; data: GmgnTokenSecurity }>(
-        "/v1/token/security",
-        {
-          chain: "robinhood",
-          token_address: data.address,
-        }
-      );
-      return res.data;
-    } catch (e) {
-      console.error("[getGmgnTokenSecurity]", e);
-      return null;
-    }
+  .handler(async ({ data }): Promise<GmgnResult<GmgnTokenSecurity>> => {
+    gmgnLogger.info("getGmgnTokenSecurity called for:", data.address);
+    return getGmgnTokenSecurity(data.address);
   });
 
-export const getGmgnTokenPool = createServerFn({ method: "GET" })
+export const getGmgnTokenPoolFn = createServerFn({ method: "GET" })
   .validator((d: { address: string }) => addrSchema.parse(d))
-  .handler(async ({ data }): Promise<GmgnTokenPool | null> => {
-    try {
-      const res = await gmgnFetch<{ code: number; data: GmgnTokenPool }>(
-        "/v1/token/pool",
-        {
-          chain: "robinhood",
-          token_address: data.address,
-        }
-      );
-      return res.data;
-    } catch (e) {
-      console.error("[getGmgnTokenPool]", e);
-      return null;
-    }
+  .handler(async ({ data }): Promise<GmgnResult<GmgnTokenPool>> => {
+    gmgnLogger.info("getGmgnTokenPool called for:", data.address);
+    return getGmgnTokenPool(data.address);
   });
 
-// Re-export from original files for now to maintain compatibility
+// Re-export from original files to maintain compatibility
 export {
   getDevOverview,
   getAddressTxs,
   getDeployedContracts,
 } from "@/lib/rhc.functions";
-
 export {
   listReviews,
   postReview,

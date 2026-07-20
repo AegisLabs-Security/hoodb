@@ -1,37 +1,42 @@
 import { motion } from "framer-motion";
 import { Calendar, Rocket, Activity, Award, Star, TrendingUp, DollarSign } from "lucide-react";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import type { GmgnWalletStats, GmgnCreatedTokens, GmgnWalletHoldings } from "../types";
+import type { GmgnWalletStats, GmgnCreatedTokens, GmgnWalletHoldings, GmgnResult } from "../types";
+import { unwrapGmgnResult } from "../utils";
 
 interface QuickStatsSectionProps {
-  gmgnWalletStats: GmgnWalletStats | null;
-  gmgnCreatedTokens: GmgnCreatedTokens | null;
-  gmgnWalletHoldings: GmgnWalletHoldings | null;
+  gmgnWalletStats: GmgnResult<GmgnWalletStats>;
+  gmgnCreatedTokens: GmgnResult<GmgnCreatedTokens>;
+  gmgnWalletHoldings: GmgnResult<GmgnWalletHoldings>;
 }
 
 export function QuickStatsSection({ gmgnWalletStats, gmgnCreatedTokens, gmgnWalletHoldings }: QuickStatsSectionProps) {
+  const statsData = unwrapGmgnResult(gmgnWalletStats);
+  const createdTokensData = unwrapGmgnResult(gmgnCreatedTokens);
+  const holdingsData = unwrapGmgnResult(gmgnWalletHoldings);
+
   // Calculate wallet age from created_at (if available)
   let walletAgeDays = 0;
-  if (gmgnWalletStats?.common?.created_at) {
-    const createdAt = new Date(gmgnWalletStats.common.created_at * 1000); // convert to ms
+  if (statsData?.common?.created_at) {
+    const createdAt = new Date(statsData.common.created_at * 1000); // convert to ms
     walletAgeDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
   }
 
   // Calculate total tokens launched
-  const tokensLaunched = gmgnCreatedTokens
-    ? (gmgnCreatedTokens.inner_count ?? 0) + (gmgnCreatedTokens.open_count ?? 0)
+  const tokensLaunched = createdTokensData
+    ? (createdTokensData.inner_count ?? 0) + (createdTokensData.open_count ?? 0)
     : 0;
 
-  const activeTokens = gmgnCreatedTokens?.open_count ?? 0;
-  const graduatedTokens = gmgnCreatedTokens?.open_count ?? 0;
+  const activeTokens = createdTokensData?.open_count ?? 0;
+  const graduatedTokens = createdTokensData?.open_count ?? 0;
 
   // Calculate portfolio value from holdings
-  const portfolioValue = gmgnWalletHoldings?.holdings?.reduce((sum, h) => sum + (h.usd_value ?? 0), 0) ?? 0;
+  const portfolioValue = holdingsData?.holdings?.reduce((sum, h) => sum + (h.usd_value ?? 0), 0) ?? 0;
 
   // Get highest ATH from created tokens
   let highestAth = 0;
-  if (gmgnCreatedTokens?.creator_ath_info?.ath_mc) {
-    highestAth = parseFloat(gmgnCreatedTokens.creator_ath_info.ath_mc);
+  if (createdTokensData?.creator_ath_info?.ath_mc) {
+    highestAth = parseFloat(createdTokensData.creator_ath_info.ath_mc);
   }
 
   const stats = [
@@ -58,7 +63,7 @@ export function QuickStatsSection({ gmgnWalletStats, gmgnCreatedTokens, gmgnWall
     },
     {
       label: "Avg Rating",
-      value: gmgnWalletStats?.winrate ? gmgnWalletStats.winrate * 5 : 0,
+      value: statsData?.winrate ? statsData.winrate * 5 : 0,
       suffix: " ★",
       icon: <Star className="w-5 h-5" />,
       decimals: 1,
