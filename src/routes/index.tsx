@@ -56,8 +56,10 @@ const trackedDevsQO = queryOptions({
 const robinhoodNewPairsQO = queryOptions({
   queryKey: ["market", "robinhood", "new-pairs"],
   queryFn: () => getRobinhoodNewPairs(),
-  refetchInterval: 60_000,
-  staleTime: 30_000,
+  refetchInterval: 15_000,
+  refetchIntervalInBackground: true,
+  refetchOnWindowFocus: true,
+  staleTime: 10_000,
 });
 
 export const Route = createFileRoute("/")({

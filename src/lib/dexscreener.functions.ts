@@ -6,6 +6,7 @@ const DEXSCREENER_API = "https://api.dexscreener.com";
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RETRIES = 2;
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const MAX_PROFILE_CANDIDATES = 90;
 
 const dexLinkSchema = z.object({
   label: z.string().optional(),
@@ -103,6 +104,7 @@ export type RobinhoodNewPair = {
   sellsH1: number;
   pairCreatedAt: number;
   ageLabel: string;
+  profileUpdatedAt: string | null;
 };
 
 export type RobinhoodNewPairsResult =
@@ -140,6 +142,12 @@ function formatAgeLabel(timestamp: number): string {
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 30) return `${diffDays}d ago`;
   return new Date(timestamp).toISOString().slice(0, 10);
+}
+
+function parseTimestamp(value: string | undefined): number {
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 async function fetchDexscreener<T>(
@@ -215,7 +223,32 @@ function buildPair(profileMap: Map<string, DexTokenProfile>, pair: DexPair): Rob
     sellsH1: pair.txns?.h1?.sells ?? 0,
     pairCreatedAt: createdAt,
     ageLabel: formatAgeLabel(createdAt),
+    profileUpdatedAt: profile?.updatedAt ?? null,
   };
+}
+
+async function getRobinhoodProfiles(): Promise<DexTokenProfile[]> {
+  const [latestProfiles, recentProfiles] = await Promise.all([
+    fetchDexscreener("/token-profiles/latest/v1", tokenProfilesSchema),
+    fetchDexscreener("/token-profiles/recent-updates/v1", tokenProfilesSchema).catch(() => []),
+  ]);
+
+  const merged = new Map<string, DexTokenProfile>();
+  const robinhoodProfiles = [...latestProfiles, ...recentProfiles]
+    .filter((profile) => profile.chainId === "robinhood" && isValidAddress(profile.tokenAddress))
+    .sort((left, right) => parseTimestamp(right.updatedAt) - parseTimestamp(left.updatedAt));
+
+  for (const profile of robinhoodProfiles) {
+    const key = normalizeAddress(profile.tokenAddress);
+    const current = merged.get(key);
+    if (!current || parseTimestamp(profile.updatedAt) > parseTimestamp(current.updatedAt)) {
+      merged.set(key, profile);
+    }
+  }
+
+  return Array.from(merged.values())
+    .sort((left, right) => parseTimestamp(right.updatedAt) - parseTimestamp(left.updatedAt))
+    .slice(0, MAX_PROFILE_CANDIDATES);
 }
 
 export const getRobinhoodNewPairs = createServerFn({ method: "GET" }).handler(
@@ -223,14 +256,11 @@ export const getRobinhoodNewPairs = createServerFn({ method: "GET" }).handler(
     const fetchedAt = new Date().toISOString();
 
     try {
-      const profiles = await fetchDexscreener("/token-profiles/latest/v1", tokenProfilesSchema);
-      const robinhoodProfiles = profiles.filter(
-        (profile) => profile.chainId === "robinhood" && isValidAddress(profile.tokenAddress),
-      );
+      const robinhoodProfiles = await getRobinhoodProfiles();
 
       const uniqueAddresses = Array.from(
         new Set(robinhoodProfiles.map((profile) => normalizeAddress(profile.tokenAddress))),
-      ).slice(0, 24);
+      );
 
       if (uniqueAddresses.length === 0) {
         return {
@@ -262,6 +292,14 @@ export const getRobinhoodNewPairs = createServerFn({ method: "GET" }).handler(
         .sort((left, right) => {
           const createdDiff = (right.pairCreatedAt ?? 0) - (left.pairCreatedAt ?? 0);
           if (createdDiff !== 0) return createdDiff;
+          const updatedDiff =
+            parseTimestamp(
+              profileMap.get(normalizeAddress(right.baseToken.address))?.updatedAt,
+            ) -
+            parseTimestamp(
+              profileMap.get(normalizeAddress(left.baseToken.address))?.updatedAt,
+            );
+          if (updatedDiff !== 0) return updatedDiff;
           return (right.liquidity?.usd ?? 0) - (left.liquidity?.usd ?? 0);
         })
         .map((pair) => buildPair(profileMap, pair))

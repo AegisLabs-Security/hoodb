@@ -20,12 +20,32 @@ function formatCompactCurrency(value: number | null): string {
 
 function formatPrice(value: number | null): string {
   if (value == null || Number.isNaN(value) || value <= 0) return "—";
+  if (value < 0.000001) {
+    return `$${value.toExponential(2)}`;
+  }
+  if (value < 0.01) {
+    return `$${value.toPrecision(4)}`;
+  }
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: value < 0.01 ? 4 : 2,
-    maximumFractionDigits: value < 0.01 ? 8 : 2,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
   }).format(value);
+}
+
+function getStatValueClassName(value: string): string {
+  const length = value.length;
+
+  if (length >= 14) {
+    return "text-[1rem] md:text-[1.1rem] leading-tight break-all";
+  }
+
+  if (length >= 10) {
+    return "text-[1.25rem] md:text-[1.45rem] leading-tight";
+  }
+
+  return "text-[1.6rem] md:text-[1.8rem] leading-none";
 }
 
 function initialFromSymbol(symbol: string): string {
@@ -165,12 +185,19 @@ export function RobinhoodNewPairCard({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-background/35 p-4">
+    <div className="min-w-0 rounded-2xl border border-white/5 bg-background/35 p-4">
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
         <Droplets className="size-3 text-neon/80" />
         {label}
       </div>
-      <div className="mt-2 font-display text-2xl font-black text-foreground">{value}</div>
+      <div
+        className={cn(
+          "mt-2 min-h-[2.6rem] max-w-full overflow-hidden font-display font-black text-foreground",
+          getStatValueClassName(value),
+        )}
+      >
+        {value}
+      </div>
     </div>
   );
 }
