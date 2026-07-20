@@ -93,7 +93,9 @@ export const getDevOverview = createServerFn({ method: "GET" })
       token_transfers_count?: string;
       gas_usage_count?: string;
       validations_count?: string;
-    }>(`/addresses/${addr}/counters`).catch(() => ({}));
+    }>(`/addresses/${addr}/counters`).catch(
+      () => ({}) as { transactions_count?: string },
+    );
 
     // Fetch a page of transactions to derive first-seen, success rate, contract creations
     const txPage = await bs<{ items?: any[] }>(
