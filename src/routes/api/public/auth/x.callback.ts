@@ -13,13 +13,15 @@ function parseCookies(header: string | null): Record<string, string> {
   return out;
 }
 
-function errPage(message: string) {
-  return new Response(
-    `<!doctype html><meta charset="utf-8"><title>Sign-in failed</title>
-<div style="font-family:system-ui;padding:2rem;max-width:640px;margin:auto;color:#fff;background:#0a1a0e;min-height:100vh">
-<h1>Sign-in failed</h1><p>${message}</p><p><a href="/auth" style="color:#8afc7c">Try again</a></p></div>`,
-    { status: 400, headers: { "content-type": "text/html; charset=utf-8" } },
-  );
+function errRedirect(request: Request, message: string) {
+  const url = new URL(request.url);
+  const target = `${url.protocol}//${url.host}/auth?error=${encodeURIComponent(message)}`;
+  const headers = new Headers({ Location: target });
+  const clear = "Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
+  headers.append("Set-Cookie", `x_pkce=; ${clear}`);
+  headers.append("Set-Cookie", `x_state=; ${clear}`);
+  headers.append("Set-Cookie", `x_next=; ${clear}`);
+  return new Response(null, { status: 302, headers });
 }
 
 export const Route = createFileRoute("/api/public/auth/x/callback")({
@@ -30,17 +32,17 @@ export const Route = createFileRoute("/api/public/auth/x/callback")({
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state");
         const err = url.searchParams.get("error");
-        if (err) return errPage(`X returned error: ${err}`);
-        if (!code || !state) return errPage("Missing authorization code.");
+        if (err) return errRedirect(request, `X returned error: ${err}`);
+        if (!code || !state) return errRedirect(request, "Missing authorization code.");
 
         const cookies = parseCookies(request.headers.get("cookie"));
-        if (cookies.x_state !== state) return errPage("State mismatch. Please try again.");
+        if (cookies.x_state !== state) return errRedirect(request, "State mismatch. Please try again.");
         const verifier = cookies.x_pkce;
-        if (!verifier) return errPage("PKCE verifier expired. Please try again.");
+        if (!verifier) return errRedirect(request, "PKCE verifier expired. Please try again.");
 
         const clientId = process.env.X_CLIENT_ID;
         const clientSecret = process.env.X_CLIENT_SECRET;
-        if (!clientId || !clientSecret) return errPage("X sign-in is not configured.");
+        if (!clientId || !clientSecret) return errRedirect(request, "X sign-in is not configured.");
 
         const origin = `${url.protocol}//${url.host}`;
         const redirectUri = `${origin}${CALLBACK_PATH}`;
@@ -63,7 +65,7 @@ export const Route = createFileRoute("/api/public/auth/x/callback")({
         if (!tokenRes.ok) {
           const t = await tokenRes.text();
           console.error("[x/callback token]", t);
-          return errPage(`Token exchange failed: ${t.slice(0, 200)}`);
+          return errRedirect(request, `Token exchange failed: ${t.slice(0, 200)}`);
         }
         const tok = (await tokenRes.json()) as { access_token: string };
 
@@ -75,7 +77,7 @@ export const Route = createFileRoute("/api/public/auth/x/callback")({
         if (!meRes.ok) {
           const t = await meRes.text();
           console.error("[x/callback me]", t);
-          return errPage("Failed to fetch X profile.");
+          return errRedirect(request, "Failed to fetch X profile.");
         }
         const me = (await meRes.json()) as {
           data: { id: string; username: string; name: string; profile_image_url?: string; verified?: boolean };
@@ -110,7 +112,7 @@ export const Route = createFileRoute("/api/public/auth/x/callback")({
           });
           if (created.error || !created.data.user) {
             console.error("[x/callback createUser]", created.error);
-            return errPage("Failed to create account.");
+            return errRedirect(request, "Failed to create account.");
           }
           userId = created.data.user.id;
         } else {
@@ -140,7 +142,7 @@ export const Route = createFileRoute("/api/public/auth/x/callback")({
         });
         if (link.error || !link.data.properties?.action_link) {
           console.error("[x/callback generateLink]", link.error);
-          return errPage("Failed to create sign-in link.");
+          return errRedirect(request, "Failed to create sign-in link.");
         }
 
         const headers = new Headers({ Location: link.data.properties.action_link });
