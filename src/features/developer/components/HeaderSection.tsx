@@ -93,7 +93,7 @@ export function HeaderSection({ address, copied, copy, gmgnWalletStats, overview
 
               {!statsData && (
                 <p className="mt-3 text-sm text-muted-foreground">
-                  Live trust signal memakai data on-chain asli dari Robinhood Chain.
+                  Live trust signals are currently derived from native Robinhood Chain on-chain data.
                 </p>
               )}
 
@@ -128,12 +128,12 @@ export function HeaderSection({ address, copied, copy, gmgnWalletStats, overview
               <>
                 <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-200">
                   <AlertTriangle className="w-3.5 h-3.5" />
-                  GMGN Unavailable
+                  Limited Data
                 </div>
                 <div className="max-w-52 text-center">
                   <div className="font-display text-3xl font-black text-neon">N/A</div>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Trust score GMGN belum tersedia untuk wallet ini.
+                    An external trust signal is not currently available for this wallet.
                   </p>
                 </div>
               </>

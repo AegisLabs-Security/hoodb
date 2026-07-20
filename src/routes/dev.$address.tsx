@@ -156,9 +156,9 @@ function DevPage() {
               <div className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm text-amber-100">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="font-semibold">GMGN provider sedang tidak tersedia</p>
+                  <p className="font-semibold">Additional market intelligence is currently unavailable</p>
                   <p className="mt-1 text-amber-100/80">
-                    HOODDB tetap menampilkan data on-chain dan review komunitas. Detail enrichment dari GMGN disembunyikan agar tidak memunculkan angka palsu.
+                    HOODDB continues to display live on-chain data and community reviews. Supplementary analytics are temporarily hidden to avoid showing misleading placeholder values.
                   </p>
                   <p className="mt-2 font-mono text-xs text-amber-100/70">{gmgnMessage}</p>
                 </div>

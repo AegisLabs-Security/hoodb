@@ -45,7 +45,7 @@ export function StickySidebar({ address, copied, copy, reputation, avgRating, la
             </a>
             <button className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-surface-2 border border-border hover:border-neon hover:text-neon transition">
               <BarChart3 className="w-5 h-5" />
-              GMGN
+              Analytics
             </button>
             <button className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-surface-2 border border-border hover:border-neon hover:text-neon transition">
               <Zap className="w-5 h-5" />

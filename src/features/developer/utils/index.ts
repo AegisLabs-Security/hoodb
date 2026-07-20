@@ -7,7 +7,7 @@ export function unwrapGmgnResult<T>(result: GmgnResult<T>): T | null {
 
 export function getGmgnErrorMessage(result: GmgnResult<unknown>): string | null {
   if (!result.success) {
-    return `${result.error.code}: ${result.error.message}`;
+    return "Additional market intelligence is temporarily unavailable. Live on-chain data remains available.";
   }
   return null;
 }

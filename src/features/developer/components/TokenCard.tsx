@@ -124,7 +124,7 @@ export function TokenCard({ token, index }: TokenCardProps) {
               target="_blank"
               rel="noreferrer"
               className="p-3 rounded-xl border border-border hover:border-neon hover:text-neon transition"
-              title="View on GMGN"
+              title="View market analytics"
             >
               <BarChart3 className="w-4 h-4" />
             </a>

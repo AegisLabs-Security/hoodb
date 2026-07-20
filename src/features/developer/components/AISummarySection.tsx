@@ -63,38 +63,38 @@ export function AISummarySection({
           </div>
           <div>
             <h2 className="font-display text-2xl font-bold">AI Developer Summary</h2>
-            <p className="text-xs text-muted-foreground">Provider eksternal sedang tidak tersedia</p>
+            <p className="text-xs text-muted-foreground">External provider is currently unavailable</p>
           </div>
         </div>
         <div className="p-8">
           <div className="space-y-4 text-lg leading-relaxed text-muted-foreground/90">
             <p>
-              Wallet ini sudah tercatat di Robinhood Chain selama{" "}
+              This wallet has been active on Robinhood Chain for{" "}
               <span className="text-neon font-bold">
                 {overview.firstSeenAt
                   ? Math.max(0, Math.floor((Date.now() - new Date(overview.firstSeenAt).getTime()) / 86400000))
                   : 0}{" "}
-                hari
+                days
               </span>{" "}
-              dengan <span className="text-neon font-bold">{overview.txCount}</span> transaksi on-chain.
+              with <span className="text-neon font-bold">{overview.txCount}</span> on-chain transactions recorded.
             </p>
             <p>
-              Developer ini telah melakukan deploy{" "}
-              <span className="text-neon font-bold">{overview.contractsDeployedCount}</span> kontrak, termasuk{" "}
-              <span className="text-neon font-bold">{tokenContracts}</span> kontrak token yang terdeteksi dan{" "}
-              <span className="text-neon font-bold">{overview.verifiedContractsCount}</span> kontrak terverifikasi.
+              This developer has deployed{" "}
+              <span className="text-neon font-bold">{overview.contractsDeployedCount}</span> contracts, including{" "}
+              <span className="text-neon font-bold">{tokenContracts}</span> detected token contracts and{" "}
+              <span className="text-neon font-bold">{overview.verifiedContractsCount}</span> verified contracts.
             </p>
             <p>
-              Tingkat keberhasilan transaksi berada di{" "}
+              The observed transaction success rate is{" "}
               <span className="text-neon font-bold">{overview.successRate}%</span>
               {reviewCount > 0 && avgRating
-                ? `, dengan rating komunitas ${avgRating.toFixed(1)}/5 dari ${reviewCount} review.`
+                ? `, with a community rating of ${avgRating.toFixed(1)}/5 across ${reviewCount} reviews.`
                 : "."}
             </p>
             {verifiedRatio > 0 && (
               <p>
-                Rasio verifikasi kontrak saat ini mencapai{" "}
-                <span className="text-neon font-bold">{verifiedRatio}%</span>, memberi sinyal reputasi builder yang lebih kuat.
+                The current contract verification ratio is{" "}
+                <span className="text-neon font-bold">{verifiedRatio}%</span>, which indicates a stronger builder reputation profile.
               </p>
             )}
           </div>

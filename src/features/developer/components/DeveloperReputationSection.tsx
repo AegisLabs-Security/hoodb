@@ -78,7 +78,7 @@ export function DeveloperReputationSection({
           <div>
             <h2 className="font-display text-2xl font-bold">Developer Reputation</h2>
             <p className="text-xs text-muted-foreground">
-              Menggunakan scoring on-chain asli dari Robinhood Chain
+              Powered by native Robinhood Chain on-chain scoring
             </p>
           </div>
         </div>
