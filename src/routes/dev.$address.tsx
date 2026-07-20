@@ -312,11 +312,17 @@ function ReviewsPanel({ address, onChanged }: { address: string; onChanged: () =
   const { data: reviews } = useSuspenseQuery(q.reviews);
 
   const [authed, setAuthed] = useState<boolean | null>(null);
-  useState(() => {
-    supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
-    supabase.auth.onAuthStateChange((_e, s) => setAuthed(!!s));
-    return 0;
-  });
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setAuthed(!!data.session);
+    });
+    const sub = supabase.auth.onAuthStateChange((_e, s) => setAuthed(!!s));
+    return () => {
+      mounted = false;
+      sub.data.subscription.unsubscribe();
+    };
+  }, []);
 
   const profileQuery = useQuery({
     queryKey: ["profile", "me"],
