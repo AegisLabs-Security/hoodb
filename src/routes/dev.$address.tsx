@@ -167,7 +167,7 @@ function DevPage() {
               <span className="text-xs text-muted-foreground">First seen {dev.firstSeen}</span>
             </div>
             <div className="divide-y divide-border/60">
-              {dev.recent.map((l) => (
+              {dev.recent.map((l: import("@/lib/hooddb-data").Launch) => (
                 <div key={l.id} className="p-5 flex items-center gap-4">
                   <div className="size-10 rounded-lg bg-neon/10 border border-neon/30 flex items-center justify-center font-mono text-xs font-bold text-neon">
                     {l.symbol.slice(0, 3)}
