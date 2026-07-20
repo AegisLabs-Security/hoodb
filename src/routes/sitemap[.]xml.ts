@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
-import { devs } from "@/lib/hooddb-data";
+import { listTrackedDevs } from "@/lib/reviews.functions";
 
 const BASE_URL = "";
 
@@ -8,6 +8,7 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const devs = await listTrackedDevs().catch(() => [] as { address: string }[]);
         const entries = [
           { path: "/", changefreq: "daily", priority: "1.0" },
           { path: "/leaderboard", changefreq: "hourly", priority: "0.9" },
