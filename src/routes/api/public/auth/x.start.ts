@@ -5,7 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createHash, randomBytes } from "node:crypto";
 
 const CALLBACK_PATH = "/api/public/auth/x/callback";
-const X_AUTH_URL = "https://twitter.com/i/oauth2/authorize";
+const X_AUTH_URL = "https://x.com/i/oauth2/authorize";
 
 function b64url(buf: Buffer) {
   return buf.toString("base64").replace(/=+$/g, "").replace(/\+/g, "-").replace(/\//g, "_");
