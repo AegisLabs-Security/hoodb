@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { TrendingUp, Award, AlertCircle, Clock, ExternalLink, BarChart3 } from "lucide-react";
+import { TrendingUp, Award, AlertCircle, Clock, ExternalLink, BarChart3, Users, Droplets, DollarSign } from "lucide-react";
 import { explorerAddr, timeAgo } from "@/lib/rhc";
 import type { GmgnCreatedTokens } from "../types";
 
@@ -28,6 +28,8 @@ export function TokenCard({ token, index }: TokenCardProps) {
 
   const marketCap = token.market_cap ? parseFloat(token.market_cap) : 0;
   const athMarketCap = token.token_ath_mc ? parseFloat(token.token_ath_mc) : 0;
+  const liquidity = token.liquidity_usd ? parseFloat(token.liquidity_usd) : 0;
+  const volume24h = token.volume_24h ? parseFloat(token.volume_24h) : 0;
 
   return (
     <motion.div
@@ -39,15 +41,23 @@ export function TokenCard({ token, index }: TokenCardProps) {
       <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center">
         {/* Token Logo & Basic Info */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="w-14 h-14 rounded-2xl bg-neon/10 border border-neon/30 flex items-center justify-center shrink-0">
-            <span className="font-mono text-xs font-bold text-neon">
-              {token.symbol.slice(0, 3).toUpperCase()}
-            </span>
-          </div>
+          {token.logo ? (
+            <img
+              src={token.logo}
+              alt={token.symbol}
+              className="w-14 h-14 rounded-2xl border border-neon/30 object-cover shrink-0"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-2xl bg-neon/10 border border-neon/30 flex items-center justify-center shrink-0">
+              <span className="font-mono text-xs font-bold text-neon">
+                {token.symbol.slice(0, 3).toUpperCase()}
+              </span>
+            </div>
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-bold text-xl truncate group-hover:text-neon transition">
-                {token.symbol}
+                {token.name || token.symbol}
               </h3>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -60,15 +70,35 @@ export function TokenCard({ token, index }: TokenCardProps) {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
           <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Market Cap</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1 flex items-center gap-1">
+              <DollarSign className="w-3 h-3" /> Market Cap
+            </span>
             <span className="font-mono font-bold text-neon">
-              ${marketCap.toLocaleString()}
+              {marketCap > 0 ? `$${marketCap.toLocaleString()}` : "—"}
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1">ATH</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1 flex items-center gap-1">
+              <Award className="w-3 h-3" /> ATH
+            </span>
             <span className="font-mono font-bold text-neon/80">
-              ${athMarketCap.toLocaleString()}
+              {athMarketCap > 0 ? `$${athMarketCap.toLocaleString()}` : "—"}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1 flex items-center gap-1">
+              <Droplets className="w-3 h-3" /> Liquidity
+            </span>
+            <span className="font-mono font-bold text-neon/60">
+              {liquidity > 0 ? `$${liquidity.toLocaleString()}` : "—"}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground uppercase tracking-widest mb-1 flex items-center gap-1">
+              <Users className="w-3 h-3" /> Holders
+            </span>
+            <span className="font-mono font-bold text-neon/40">
+              {token.holder_count?.toLocaleString() || "—"}
             </span>
           </div>
         </div>
@@ -85,12 +115,19 @@ export function TokenCard({ token, index }: TokenCardProps) {
               target="_blank"
               rel="noreferrer"
               className="p-3 rounded-xl border border-border hover:border-neon hover:text-neon transition"
+              title="View on Blockscout"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
-            <button className="p-3 rounded-xl border border-border hover:border-neon hover:text-neon transition">
+            <a
+              href={`https://gmgn.ai/robinhood/token/${token.token_address}`}
+              target="_blank"
+              rel="noreferrer"
+              className="p-3 rounded-xl border border-border hover:border-neon hover:text-neon transition"
+              title="View on GMGN"
+            >
               <BarChart3 className="w-4 h-4" />
-            </button>
+            </a>
           </div>
         </div>
       </div>

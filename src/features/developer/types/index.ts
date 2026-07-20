@@ -38,11 +38,18 @@ export interface GmgnWalletStats {
 export interface GmgnCreatedToken {
   token_address: string;
   symbol: string;
+  name?: string;
   chain: string;
   create_timestamp: number;
   is_open: boolean;
   market_cap?: string;
   token_ath_mc?: string;
+  liquidity?: string;
+  liquidity_usd?: string;
+  volume_24h?: string;
+  holder_count?: number;
+  price?: number;
+  logo?: string;
 }
 
 export interface GmgnCreatorAthInfo {
