@@ -15,7 +15,7 @@ function serverPublicClient() {
 
 /* ---------- Public: list reviews for a dev address ---------- */
 export const listReviews = createServerFn({ method: "GET" })
-  .inputValidator((d: { address: string }) =>
+  .validator((d: { address: string }) =>
     z.object({ address: z.string().refine(isValidAddress) }).parse(d),
   )
   .handler(async ({ data }): Promise<ReviewWithProfile[]> => {
@@ -60,7 +60,7 @@ export const listReviews = createServerFn({ method: "GET" })
 /* ---------- Auth: post a review ---------- */
 export const postReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { address: string; rating: number; content: string }) =>
+  .validator((d: { address: string; rating: number; content: string }) =>
     z
       .object({
         address: z.string().refine(isValidAddress),
@@ -92,7 +92,7 @@ export const postReview = createServerFn({ method: "POST" })
 /* ---------- Auth: delete own review ---------- */
 export const deleteMyReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("reviews")
@@ -120,7 +120,7 @@ export const listTrackedDevs = createServerFn({ method: "GET" }).handler(async (
 
 /* ---------- Public: aggregate rating for a set of addresses ---------- */
 export const getReviewAggregates = createServerFn({ method: "POST" })
-  .inputValidator((d: { addresses: string[] }) =>
+  .validator((d: { addresses: string[] }) =>
     z.object({ addresses: z.array(z.string().refine(isValidAddress)).max(100) }).parse(d),
   )
   .handler(async ({ data }) => {

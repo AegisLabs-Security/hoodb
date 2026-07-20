@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import logoAsset from "@/assets/hooddb-logo.png.asset.json";
+import logoSrc from "@/assets/hooddb-logo.png";
 
 const XIcon = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
@@ -18,7 +18,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl px-4 md:px-8 py-12 grid gap-10 md:grid-cols-3">
         <div>
           <div className="flex items-center gap-3">
-            <img src={logoAsset.url} alt="HOODDB" className="h-10 w-10 rounded-md" />
+            <img src={logoSrc} alt="HOODDB" className="h-10 w-10 rounded-md" />
             <div>
               <div className="font-display text-lg font-black tracking-wider">
                 HOOD<span className="neon-text">DB</span>

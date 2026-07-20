@@ -77,7 +77,7 @@ export const getLatestNetworkTxs = createServerFn({ method: "GET" }).handler(asy
 
 /* ---------- Address overview ---------- */
 export const getDevOverview = createServerFn({ method: "GET" })
-  .inputValidator((d: { address: string }) => addrSchema.parse(d))
+  .validator((d: { address: string }) => addrSchema.parse(d))
   .handler(async ({ data }) => {
     const addr = normalizeAddress(data.address);
     const info = await bs<{
@@ -145,7 +145,7 @@ export const getDevOverview = createServerFn({ method: "GET" })
 
 /* ---------- Recent transactions of an address ---------- */
 export const getAddressTxs = createServerFn({ method: "GET" })
-  .inputValidator((d: { address: string }) => addrSchema.parse(d))
+  .validator((d: { address: string }) => addrSchema.parse(d))
   .handler(async ({ data }) => {
     const addr = normalizeAddress(data.address);
     const j = await bs<{ items?: any[] }>(`/addresses/${addr}/transactions`).catch(
@@ -171,7 +171,7 @@ export const getAddressTxs = createServerFn({ method: "GET" })
 
 /* ---------- Deployed contracts of an address ---------- */
 export const getDeployedContracts = createServerFn({ method: "GET" })
-  .inputValidator((d: { address: string }) => addrSchema.parse(d))
+  .validator((d: { address: string }) => addrSchema.parse(d))
   .handler(async ({ data }): Promise<DeployedContract[]> => {
     const addr = normalizeAddress(data.address);
     const j = await bs<{ items?: any[] }>(`/addresses/${addr}/transactions?filter=from`).catch(

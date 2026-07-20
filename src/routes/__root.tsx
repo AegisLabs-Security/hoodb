@@ -10,7 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import logoAsset from "../assets/hooddb-logo.png.asset.json";
+import logoSrc from "../assets/hooddb-logo.png";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -83,19 +83,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Track dev activity. Analyze reputation. Discover legit builders on Robinhood Chain.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: logoAsset.url },
+      { property: "og:image", content: logoSrc },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "HOODDB — On-Chain Dev Tracker" },
       {
         name: "twitter:description",
         content: "Track dev activity. Analyze reputation. Discover legit builders.",
       },
-      { name: "twitter:image", content: logoAsset.url },
+      { name: "twitter:image", content: logoSrc },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/png", href: logoAsset.url },
-      { rel: "apple-touch-icon", href: logoAsset.url },
+      { rel: "icon", type: "image/png", href: logoSrc },
+      { rel: "apple-touch-icon", href: logoSrc },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

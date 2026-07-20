@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import logoAsset from "@/assets/hooddb-logo.png.asset.json";
+import logoSrc from "@/assets/hooddb-logo.png";
 import { Menu, X, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,7 +64,7 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-8">
         <Link to="/" className="flex items-center gap-3 group">
           <img
-            src={logoAsset.url}
+            src={logoSrc}
             alt="HOODDB"
             className="h-10 w-10 rounded-md transition-transform group-hover:scale-105"
           />

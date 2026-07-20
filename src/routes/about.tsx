@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import bannerAsset from "@/assets/hooddb-banner.png.asset.json";
+import bannerSrc from "@/assets/hooddb-banner.png";
 import { ShieldCheck, Users, Globe2, BarChart3, Rocket, Code2 } from "lucide-react";
 
 export const Route = createFileRoute("/about")({
@@ -38,7 +38,7 @@ function About() {
         </p>
 
         <div className="mt-10 rounded-2xl overflow-hidden neon-border">
-          <img src={bannerAsset.url} alt="HOODDB banner" className="w-full" />
+          <img src={bannerSrc} alt="HOODDB banner" className="w-full" />
         </div>
 
         <div className="mt-14 grid gap-4 md:grid-cols-3">

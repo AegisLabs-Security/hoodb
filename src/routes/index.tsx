@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import bgAsset from "@/assets/hooddb-bg.png.asset.json";
+import bgSrc from "@/assets/hooddb-web-backgroud.png";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DevCard, type DevCardData } from "@/components/dev-card";
@@ -21,6 +21,12 @@ import {
   Zap,
   Globe2,
 } from "lucide-react";
+
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
+  return isClient ? <>{children}</> : null;
+}
 
 const globalStatsQO = queryOptions({
   queryKey: ["rhc", "stats"],
@@ -115,7 +121,7 @@ function Home() {
       <section className="relative overflow-hidden scanline">
         <div
           className="absolute inset-0 opacity-40 bg-cover bg-center"
-          style={{ backgroundImage: `url(${bgAsset.url})` }}
+          style={{ backgroundImage: `url(${bgSrc})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background" />
         <div className="absolute inset-0 grid-bg opacity-40" />
@@ -158,16 +164,18 @@ function Home() {
 
           <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { l: "Total transactions", v: stats.totalTxs?.toLocaleString() ?? "—", i: <BarChart3 className="size-4" /> },
-              { l: "Addresses", v: stats.totalAddresses?.toLocaleString() ?? "—", i: <Users className="size-4" /> },
-              { l: "Blocks", v: stats.totalBlocks?.toLocaleString() ?? "—", i: <Box className="size-4" /> },
+              { l: "Total transactions", v: stats.totalTxs?.toLocaleString("en-US") ?? "—", i: <BarChart3 className="size-4" /> },
+              { l: "Addresses", v: stats.totalAddresses?.toLocaleString("en-US") ?? "—", i: <Users className="size-4" /> },
+              { l: "Blocks", v: stats.totalBlocks?.toLocaleString("en-US") ?? "—", i: <Box className="size-4" /> },
               { l: "Avg block time", v: stats.avgBlockTime ? `${(stats.avgBlockTime / 1000).toFixed(1)}s` : "—", i: <Zap className="size-4" /> },
             ].map((s) => (
               <div key={s.l} className="neon-panel rounded-xl p-4">
                 <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-neon">
                   {s.i}{s.l}
                 </div>
-                <div className="mt-2 font-display text-3xl font-black">{s.v}</div>
+                <div className="mt-2 font-display text-3xl font-black">
+                  <ClientOnly>{s.v}</ClientOnly>
+                </div>
               </div>
             ))}
           </div>
