@@ -79,17 +79,7 @@ async function gmgnFetchRaw(
   try {
     const res = await fetch(url.toString(), {
       headers: {
-        "accept": "application/json, text/plain, */*",
-        "accept-language": "en-US,en;q=0.9",
-        "cache-control": "no-cache",
-        "pragma": "no-cache",
-        "sec-ch-ua": "\"Not/A)Brand\";v=\"8\", \"Chromium\";v=\"126\", \"Google Chrome\";v=\"126\"",
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": "\"Windows\"",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-site",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        accept: "application/json",
         "X-API-Key": apiKey,
       },
       signal: controller.signal,
@@ -98,22 +88,36 @@ async function gmgnFetchRaw(
     const endTime = Date.now();
     const duration = endTime - startTime;
 
-    gmgnLogger.debug("GMGN API response status:", {
+    // Log all response details
+    const responseHeaders: Record<string, string> = {};
+    res.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
+    let bodyText = "";
+    // Clone response to read body without consuming the stream
+    const clonedRes = res.clone();
+    try {
+      bodyText = await clonedRes.text();
+    } catch (e) {
+      bodyText = "(failed to read body)";
+    }
+
+    gmgnLogger.debug("GMGN API full response:", {
+      url: url.toString(),
       status: res.status,
       statusText: res.statusText,
+      headers: responseHeaders,
+      body: bodyText,
       duration: `${duration}ms`,
     });
 
     // Check response status
     if (!res.ok) {
-      let bodyText = "";
-      try {
-        bodyText = await res.text();
-      } catch {
-        // Ignore body parsing errors
-      }
       gmgnLogger.error("GMGN API error response:", {
         status: res.status,
+        statusText: res.statusText,
+        headers: responseHeaders,
         body: bodyText,
       });
 
